@@ -1,0 +1,74 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.tencent.ai.polaris</groupId>
+    <artifactId>agentscope-extensions-polaris-bom</artifactId>
+    <version>${revision}</version>
+    <packaging>pom</packaging>
+    <name>AgentScope Extensions Polaris BOM</name>
+    <description>Bill of Materials POM (BOM) for AgentScope Extensions Polaris</description>
+    <url>https://github.com/polarismesh/agentscope-extensions-polaris</url>
+
+    <licenses>
+        <license>
+            <name>BSD 3-Clause License</name>
+            <url>https://opensource.org/licenses/BSD-3-Clause</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>SkyeBeFreeman</id>
+            <name>Haotian Zhang</name>
+            <email>928016560@qq.com</email>
+            <organization>Tencent</organization>
+            <url>https://github.com/SkyeBeFreeman/</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <url>https://github.com/polarismesh/agentscope-extensions-polaris</url>
+        <connection>scm:git:git://github.com/polarismesh/agentscope-extensions-polaris.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/polarismesh/agentscope-extensions-polaris.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+
+    <properties>
+        <revision>0.1.0-SNAPSHOT</revision>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Core -->
+            <dependency>
+                <groupId>com.tencent.ai.polaris</groupId>
+                <artifactId>agentscope-extensions-polaris-core</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
+            <!-- MCP -->
+            <dependency>
+                <groupId>com.tencent.ai.polaris</groupId>
+                <artifactId>agentscope-extensions-polaris-mcp</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
+            <!-- A2A -->
+            <dependency>
+                <groupId>com.tencent.ai.polaris</groupId>
+                <artifactId>agentscope-extensions-polaris-a2a</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
+            <!-- Skill -->
+            <dependency>
+                <groupId>com.tencent.ai.polaris</groupId>
+                <artifactId>agentscope-extensions-polaris-skill</artifactId>
+                <version>${revision}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>
