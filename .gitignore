@@ -50,6 +50,7 @@ applog/
 .codebuddy/
 CLAUDE.md
 .claude/
+.env
 
 # Maven ignore
 .flattened-pom.xml
