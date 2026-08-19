@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Tencent is pleased to support the open source community by making agentscope-extensions-polaris available.
+  ~
+  ~ Copyright (C) 2026 Tencent. All rights reserved.
+  ~
+  ~ Licensed under the BSD 3-Clause License (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~ https://opensource.org/licenses/BSD-3-Clause
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+  ~ on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+  ~ specific language governing permissions and limitations under the License.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.tencent.ai.polaris</groupId>
+        <artifactId>agentscope-extensions-polaris-example-a2a</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>agentscope-extensions-polaris-example-a2a-server-spring-boot</artifactId>
+    <name>AgentScope Extensions Polaris Example A2A Server (Spring Boot)</name>
+    <description>Hosts an A2A agent and registers it to Polaris, assembled by Spring Boot starters</description>
+
+    <properties>
+        <spring.boot.version>4.0.3</spring.boot.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Polaris Spring Boot starter: provides PolarisAgentRegistry bean + PolarisContextManager -->
+        <dependency>
+            <groupId>com.tencent.ai.polaris</groupId>
+            <artifactId>agentscope-extensions-polaris-spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- AgentScope A2A server starter: auto-assembles AgentScopeA2aServer + JSON-RPC controller,
+             collects List<AgentRegistry> (picks up the PolarisAgentRegistry above) -->
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-a2a-spring-boot-starter</artifactId>
+            <exclusions>
+                <!-- The A2A SDK bundles jboss-logmanager as a competing SLF4J provider;
+                     Spring Boot 4 requires logback and fails to start when both are present. -->
+                <exclusion>
+                    <groupId>org.jboss.slf4j</groupId>
+                    <artifactId>slf4j-jboss-logmanager</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.jboss.logmanager</groupId>
+                    <artifactId>jboss-logmanager</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.jboss.logging</groupId>
+                    <artifactId>jboss-logging</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.jboss.threads</groupId>
+                    <artifactId>jboss-threads</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- AgentScope starter: builds Model / Memory / Toolkit / ReActAgent beans from agentscope.* config -->
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Web: serves the A2A JSON-RPC endpoint via the starter's controller -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring.boot.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

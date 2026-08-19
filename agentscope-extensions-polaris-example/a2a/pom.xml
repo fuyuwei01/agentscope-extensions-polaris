@@ -34,6 +34,8 @@
     <modules>
         <module>a2a-server</module>
         <module>a2a-client</module>
+        <module>a2a-server-spring-boot</module>
+        <module>a2a-client-spring-boot</module>
     </modules>
 
     <properties>
@@ -41,45 +43,11 @@
     </properties>
 
     <!--
-      Common runtime deps for both example apps. They are executable applications, not libraries,
-      so slf4j-api (inherited as `provided` from the parent POM) must be on the runtime classpath,
-      and a slf4j binding is required for log output.
+      logback binding + slf4j compile scope + fat-jar assembly are declared per leaf module:
+      plain-Java apps (a2a-server / a2a-client) need an explicit logback binding and a jar-with-dependencies;
+      Spring Boot apps (a2a-*-spring-boot) pull logback from the spring-boot BOM and repackage via
+      spring-boot-maven-plugin, so they must NOT inherit a pinned logback-classic version here (it would
+      clash with the BOM-managed logback-core, causing NoSuchMethodError at startup).
     -->
-    <dependencies>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <scope>compile</scope>
-        </dependency>
 
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>${logback.version}</version>
-        </dependency>
-    </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.8.0</version>
-                <executions>
-                    <execution>
-                        <id>make-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
 </project>

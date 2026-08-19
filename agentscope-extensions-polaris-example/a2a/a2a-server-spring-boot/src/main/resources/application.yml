@@ -1,0 +1,63 @@
+# A2A Spring Boot Server Example Configuration
+server:
+  port: 8888
+
+spring:
+  main:
+    banner-mode: off
+
+agentscope:
+  # Build the model via the agentscope-spring-boot-starter (OpenAI-compatible).
+  model:
+    provider: openai
+  openai:
+    api-key: ${TOKEN_HUB_API_KEY}
+    base-url: ${TOKEN_HUB_BASE_URL:https://api.openai.com/v1}
+    model-name: ${OPENAI_MODEL:deepseek-v4-flash}
+
+  # ReActAgent auto-built by the agentscope-spring-boot-starter
+  agent:
+    enabled: true
+    name: polaris-a2a-example-agent
+    sys-prompt: >-
+      You are a helpful assistant. Use the provided tools when the user asks about
+      weather, arithmetic, or the current time. Reply concisely.
+    max-iters: 10
+
+  # A2A server + agent card
+  a2a:
+    server:
+      enabled: true
+      card:
+        description: "A2A agent registered to Polaris (Spring Boot example)"
+        version: "1.0.0"
+        preferred-transport: JSONRPC
+        provider:
+          organization: AgentScope Extensions Polaris
+          url: https://github.com/polarismesh/agentscope-extensions-polaris
+        skills:
+          - id: get_weather
+            name: Get Weather
+            description: Get current weather information for a city.
+            tags: [weather]
+          - id: calculate
+            name: Calculate
+            description: Perform a simple arithmetic calculation (supports +, -, *, /).
+            tags: [math]
+          - id: get_current_time
+            name: Get Current Time
+            description: Get the current date and time.
+            tags: [time]
+  polaris:
+    address: ${POLARIS_ADDRESS:114.132.133.191:8091}
+    namespace: ${POLARIS_NAMESPACE:default}
+    token: ${POLARIS_TOKEN:}
+    enabled: true
+    a2a:
+      enabled: ${POLARIS_ENABLED:true}
+      registry:
+        enabled: true
+        ttl: 5
+      discovery:
+        enabled: true
+        refresh-interval-ms: 0

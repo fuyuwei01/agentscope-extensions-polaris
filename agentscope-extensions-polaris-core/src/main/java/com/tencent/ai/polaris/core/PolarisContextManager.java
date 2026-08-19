@@ -39,13 +39,13 @@ public class PolarisContextManager implements AutoCloseable {
     }
 
     public static PolarisContextManager fromAddress(List<String> addresses) {
-        PolarisServerProperties props = new PolarisServerProperties(addresses);
+        PolarisServerProperties props = new PolarisServerProperties(String.join(",", addresses));
         return new PolarisContextManager(props);
     }
 
     public PolarisContextManager(PolarisServerProperties properties) {
         this.properties = Objects.requireNonNull(properties, "properties");
-        List<String> addresses = properties.getServerAddresses();
+        List<String> addresses = properties.serverAddressList();
         if (addresses == null || addresses.isEmpty()) {
             throw new IllegalArgumentException("polaris server address must be configured");
         }

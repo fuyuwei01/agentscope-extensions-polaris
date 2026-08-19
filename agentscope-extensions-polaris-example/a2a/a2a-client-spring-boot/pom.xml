@@ -26,67 +26,64 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>agentscope-extensions-polaris-example-a2a-client</artifactId>
-    <name>AgentScope Extensions Polaris Example A2A Client</name>
-    <description>Discovers an A2A agent from Polaris and invokes it</description>
+    <artifactId>agentscope-extensions-polaris-example-a2a-client-spring-boot</artifactId>
+    <name>AgentScope Extensions Polaris Example A2A Client (Spring Boot)</name>
+    <description>Discovers an A2A agent from Polaris and invokes it, wired by Spring Boot</description>
+
+    <properties>
+        <spring.boot.version>4.0.3</spring.boot.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
-        <!-- Polaris A2A extension (PolarisAgentCardResolver) -->
+        <!-- Polaris Spring Boot starter: provides PolarisAgentCardResolver bean + PolarisContextManager -->
         <dependency>
             <groupId>com.tencent.ai.polaris</groupId>
-            <artifactId>agentscope-extensions-polaris-a2a</artifactId>
+            <artifactId>agentscope-extensions-polaris-spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- AgentScope A2A client (A2aAgent, AgentCardResolver SPI) -->
+        <!-- AgentScope A2A client (A2aAgent + AgentCardResolver SPI) -->
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-extensions-a2a-client</artifactId>
         </dependency>
 
-        <!-- AgentScope core (Msg/MsgRole/TextBlock); provided in a2a-client, explicit here -->
+        <!-- AgentScope core (Msg / MsgRole / TextBlock / stream) -->
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-core</artifactId>
         </dependency>
 
-        <!-- Executable app: slf4j-api on the runtime classpath + a logback binding -->
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>${logback.version}</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
         </dependency>
     </dependencies>
 
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.8.0</version>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring.boot.version}</version>
                 <executions>
                     <execution>
-                        <id>make-assembly</id>
-                        <phase>package</phase>
                         <goals>
-                            <goal>single</goal>
+                            <goal>repackage</goal>
                         </goals>
                     </execution>
                 </executions>
-                <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                    <archive>
-                        <manifest>
-                            <mainClass>com.tencent.ai.polaris.example.a2a.client.PolarisA2aClientExample</mainClass>
-                        </manifest>
-                    </archive>
-                </configuration>
             </plugin>
         </plugins>
     </build>

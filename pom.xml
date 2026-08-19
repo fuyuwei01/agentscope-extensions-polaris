@@ -49,6 +49,9 @@
         <!-- A2A -->
         <module>agentscope-extensions-polaris-a2a</module>
 
+        <!-- Spring Boot Starter -->
+        <module>agentscope-extensions-polaris-spring-boot-starter</module>
+
         <!-- Skill -->
         <module>agentscope-extensions-polaris-skill</module>
 
