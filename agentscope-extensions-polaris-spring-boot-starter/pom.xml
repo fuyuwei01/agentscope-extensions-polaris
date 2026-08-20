@@ -53,6 +53,11 @@
             <artifactId>agentscope-extensions-polaris-a2a</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.tencent.ai.polaris</groupId>
+            <artifactId>agentscope-extensions-polaris-skill</artifactId>
+        </dependency>
+
         <!-- AgentScope A2A starter: provides AgentScopeA2aServer auto-collection of List<AgentRegistry>,
              and the Constants.A2A_PREFIX used by PolarisConstants. Provided+optional: the host application
              brings the agentscope spring-boot starters. -->
