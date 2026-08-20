@@ -69,7 +69,7 @@ Inject the auto-configured `AgentSkillRepository` bean into `HarnessAgent` / `Re
 
 - **Read-only**: `save` / `delete` / `watch` are not supported; Skills are published and managed in the Polaris console.
 - **Local cache**: Downloaded Skill zip files are cached by polaris-java under `./polaris/backup/skill`.
-- **Shared connection**: `SkillAPI` shares the same `SDKContext` as the A2A extension. Do not call `PolarisSkillRepository.close()` or `SkillAPI.destroy()` from the repository — they tear down the shared `SDKContext`. `PolarisContextManager.close()` **does** destroy the `SDKContext` and must outlive the Agent. The try-with-resources snippet above is fine for a short example; production Agents must keep the context for the Agent lifetime.
+- **Shared connection**: `SkillAPI` shares the same `SDKContext` as the A2A extension. `PolarisSkillRepository.close()` is a no-op and must **not** destroy `SkillAPI` or the `SDKContext`. `PolarisContextManager.close()` / `SkillAPI.destroy()` **do** destroy the shared `SDKContext` and must outlive the Agent. The try-with-resources snippet above is fine for a short example; production Agents must keep the context for the Agent lifetime.
 
 ## How to Build
 
