@@ -55,6 +55,9 @@ CLAUDE.md
 # Maven ignore
 .flattened-pom.xml
 
+# Local git worktrees (SDD isolation)
+.worktrees/
+
 # Polaris
 */backup
 /backup
