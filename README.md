@@ -8,6 +8,7 @@ README:
 
 - [Introduction](#introduction)
 - [Modules](#modules)
+- [Skill Usage](#skill-usage)
 - [How to Build](#how-to-build)
 
 ## Introduction
@@ -33,6 +34,42 @@ agentscope-extensions-polaris (root)
 ├── agentscope-extensions-polaris-a2a      # A2A extension
 └── agentscope-extensions-polaris-skill    # Skill extension
 ```
+
+## Skill Usage
+
+`PolarisSkillRepository` implements AgentScope's `AgentSkillRepository` interface and fetches published Skill packages from Polaris (read-only). See the full example at [`agentscope-extensions-polaris-example/skill/skill-client`](agentscope-extensions-polaris-example/skill/skill-client).
+
+### Plain Java
+
+```java
+try (PolarisContextManager context = PolarisContextManager.fromAddress("127.0.0.1:8091")) {
+    AgentSkillRepository repo = PolarisSkillRepository.from(context);
+    agent = HarnessAgent.builder().skillRepository(repo) /* ... */ .build();
+}
+```
+
+### Spring Boot
+
+Add the `agentscope-extensions-polaris-spring-boot-starter` dependency and configure:
+
+```yaml
+agentscope:
+  polaris:
+    address: 127.0.0.1:8091
+    namespace: default
+    skill:
+      enabled: true
+      names: []          # empty lists all published skills
+      version: ""        # empty uses activeVersion
+```
+
+Inject the auto-configured `AgentSkillRepository` bean into `HarnessAgent` / `ReActAgent` (same as existing SkillBox registration).
+
+### Notes
+
+- **Read-only**: `save` / `delete` / `watch` are not supported; Skills are published and managed in the Polaris console.
+- **Local cache**: Downloaded Skill zip files are cached by polaris-java under `./polaris/backup/skill`.
+- **Shared connection**: `SkillAPI` shares the same `SDKContext` as the A2A extension; closing `PolarisContextManager` does not destroy `SkillAPI` separately.
 
 ## How to Build
 

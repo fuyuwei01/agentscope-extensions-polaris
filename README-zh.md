@@ -8,6 +8,7 @@ README:
 
 - [介绍](#介绍)
 - [模块](#模块)
+- [Skill 用法](#skill-用法)
 - [如何构建](#如何构建)
 
 ## 介绍
@@ -33,6 +34,42 @@ agentscope-extensions-polaris (root)
 ├── agentscope-extensions-polaris-a2a      # A2A 扩展
 └── agentscope-extensions-polaris-skill    # Skill 扩展
 ```
+
+## Skill 用法
+
+`PolarisSkillRepository` 实现 AgentScope 的 `AgentSkillRepository` 接口，从北极星拉取已发布的 Skill 包（只读）。完整示例见 [`agentscope-extensions-polaris-example/skill/skill-client`](agentscope-extensions-polaris-example/skill/skill-client)。
+
+### 纯 Java
+
+```java
+try (PolarisContextManager context = PolarisContextManager.fromAddress("127.0.0.1:8091")) {
+    AgentSkillRepository repo = PolarisSkillRepository.from(context);
+    agent = HarnessAgent.builder().skillRepository(repo) /* ... */ .build();
+}
+```
+
+### Spring Boot
+
+添加依赖 `agentscope-extensions-polaris-spring-boot-starter`，配置：
+
+```yaml
+agentscope:
+  polaris:
+    address: 127.0.0.1:8091
+    namespace: default
+    skill:
+      enabled: true
+      names: []          # 空则 List 全部 published
+      version: ""        # 空则 activeVersion
+```
+
+将自动配置的 `AgentSkillRepository` bean 注入 `HarnessAgent` / `ReActAgent`（与现有 SkillBox 注册方式一致）。
+
+### 说明
+
+- **只读**：不支持 `save` / `delete` / `watch`；Skill 在北极星控制台发布与管理。
+- **本地缓存**：下载的 Skill zip 由 polaris-java 缓存在 `./polaris/backup/skill`。
+- **共享连接**：`SkillAPI` 与 A2A 扩展共用同一 `SDKContext`，关闭 `PolarisContextManager` 时不会单独销毁 `SkillAPI`。
 
 ## 如何构建
 
