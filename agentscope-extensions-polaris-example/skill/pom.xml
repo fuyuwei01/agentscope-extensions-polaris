@@ -21,18 +21,22 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.tencent.ai.polaris</groupId>
-        <artifactId>agentscope-extensions-polaris</artifactId>
+        <artifactId>agentscope-extensions-polaris-example</artifactId>
         <version>${revision}</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>agentscope-extensions-polaris-example</artifactId>
+    <artifactId>agentscope-extensions-polaris-example-skill</artifactId>
     <packaging>pom</packaging>
-    <name>AgentScope Extensions Polaris Example</name>
-    <description>Examples for AgentScope Extensions Polaris</description>
+    <name>AgentScope Extensions Polaris Example Skill</name>
+    <description>Skill repository examples for AgentScope Extensions Polaris</description>
 
     <modules>
-        <module>a2a</module>
-        <module>skill</module>
+        <module>skill-client</module>
     </modules>
+
+    <properties>
+        <logback.version>1.5.16</logback.version>
+    </properties>
+
 </project>
