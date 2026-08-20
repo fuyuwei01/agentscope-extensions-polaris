@@ -1,3 +1,19 @@
+/*
+ * Tencent is pleased to support the open source community by making agentscope-extensions-polaris available.
+ *
+ * Copyright (C) 2026 Tencent. All rights reserved.
+ *
+ * Licensed under the BSD 3-Clause License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://opensource.org/licenses/BSD-3-Clause
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 package com.tencent.ai.polaris.skill;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -168,6 +184,41 @@ class PolarisSkillRepositoryTest {
         List<AgentSkill> skills = repository.getAllSkills();
         assertEquals(1, skills.size());
         verify(skillAPI, never()).listSkills(any());
+    }
+
+    @Test
+    void getAllSkillsWithConfiguredNamesReusesCacheWithinInterval() throws Exception {
+        repository = new PolarisSkillRepository(skillAPI, "default", "", List.of("sql-analysis"), 50, 100, 30_000L);
+        SkillDownloadResponse resp = new SkillDownloadResponse();
+        resp.setCode(ServerCodes.EXECUTE_SUCCESS);
+        resp.setZipContent(skillZip("sql-analysis", "Analyze SQL", "Run EXPLAIN", null, (String) null));
+        when(skillAPI.downloadSkill(any())).thenReturn(resp);
+
+        assertEquals(1, repository.getAllSkills().size());
+        assertEquals(1, repository.getAllSkills().size());
+        verify(skillAPI, times(1)).downloadSkill(any());
+        verify(skillAPI, never()).listSkills(any());
+    }
+
+    @Test
+    void getAllSkillsWithConfiguredNamesRedownloadsWhenRefreshIntervalIsZero() throws Exception {
+        repository = new PolarisSkillRepository(skillAPI, "default", "", List.of("sql-analysis"), 50, 100, 0L);
+        SkillDownloadResponse resp = new SkillDownloadResponse();
+        resp.setCode(ServerCodes.EXECUTE_SUCCESS);
+        resp.setZipContent(skillZip("sql-analysis", "Analyze SQL", "Run EXPLAIN", null, (String) null));
+        when(skillAPI.downloadSkill(any())).thenReturn(resp);
+
+        assertEquals(1, repository.getAllSkills().size());
+        assertEquals(1, repository.getAllSkills().size());
+        verify(skillAPI, times(2)).downloadSkill(any());
+        verify(skillAPI, never()).listSkills(any());
+    }
+
+    @Test
+    void closeDoesNotDestroySkillApi() {
+        repository.close();
+        verify(skillAPI, never()).destroy();
+        verify(skillAPI, never()).close();
     }
 
     @Test

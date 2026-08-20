@@ -69,7 +69,7 @@ agentscope:
 
 - **只读**：不支持 `save` / `delete` / `watch`；Skill 在北极星控制台发布与管理。
 - **本地缓存**：下载的 Skill zip 由 polaris-java 缓存在 `./polaris/backup/skill`。
-- **共享连接**：`SkillAPI` 与 A2A 扩展共用同一 `SDKContext`，关闭 `PolarisContextManager` 时不会单独销毁 `SkillAPI`。
+- **共享连接**：`SkillAPI` 与 A2A 扩展共用同一 `SDKContext`。仓库侧不得调用 `PolarisSkillRepository.close()` / `SkillAPI.destroy()`，它们会拆除共享的 `SDKContext`。`PolarisContextManager.close()` **会**销毁 `SDKContext`，其生命周期必须长于 Agent。上面示例中的 try-with-resources 适合短示例；生产环境中 Agent 存活期间必须一直持有该 context。
 
 ## 如何构建
 
