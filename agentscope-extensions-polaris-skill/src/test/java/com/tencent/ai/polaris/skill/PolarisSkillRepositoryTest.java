@@ -196,6 +196,19 @@ class PolarisSkillRepositoryTest {
         assertEquals("ok-skill", skills.get(0).getName());
     }
 
+    @Test
+    void getAllSkillsReusesEmptyListWithinRefreshInterval() throws Exception {
+        SkillListResponse list = new SkillListResponse();
+        list.setCode(ServerCodes.EXECUTE_SUCCESS);
+        list.setResources(List.of());
+        list.setTotal(0);
+        when(skillAPI.listSkills(any())).thenReturn(list);
+
+        assertEquals(List.of(), repository.getAllSkills());
+        assertEquals(List.of(), repository.getAllSkills());
+        verify(skillAPI, times(1)).listSkills(any());
+    }
+
     private static byte[] skillZip(
             String name, String description, String body, String extraPath, String extraContent)
             throws IOException {

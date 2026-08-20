@@ -241,12 +241,12 @@ public class PolarisSkillRepository implements AgentSkillRepository {
             return;
         }
         long now = System.currentTimeMillis();
-        if (now - lastListAtMs < listRefreshIntervalMs && !lastRefs.isEmpty()) {
+        if (lastListAtMs != 0 && now - lastListAtMs < listRefreshIntervalMs) {
             return;
         }
         synchronized (listLock) {
             now = System.currentTimeMillis();
-            if (now - lastListAtMs < listRefreshIntervalMs && !lastRefs.isEmpty()) {
+            if (lastListAtMs != 0 && now - lastListAtMs < listRefreshIntervalMs) {
                 return;
             }
             lastRefs = listSkillRefs();
