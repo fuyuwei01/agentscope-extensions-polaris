@@ -8,6 +8,8 @@ public final class PolarisA2aConstants {
     private PolarisA2aConstants() {
     }
 
+    public static final String META_AGENT_NAME = "ai-agent-name";
+
     /** Holds the full serialized {@link io.a2a.spec.AgentCard} JSON. */
     public static final String META_AGENT_CARD = "a2a.agent.card";
 

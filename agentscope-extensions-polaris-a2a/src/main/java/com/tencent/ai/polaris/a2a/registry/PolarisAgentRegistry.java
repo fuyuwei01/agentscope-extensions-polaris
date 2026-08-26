@@ -1,5 +1,7 @@
 package com.tencent.ai.polaris.a2a.registry;
 
+import static com.tencent.ai.polaris.a2a.constant.PolarisA2aConstants.META_AGENT_NAME;
+
 import com.tencent.ai.polaris.a2a.constant.PolarisA2aConstants;
 import com.tencent.ai.polaris.a2a.util.AgentCardCodec;
 import com.tencent.ai.polaris.core.PolarisContextManager;
@@ -81,7 +83,9 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
             req.setProtocol(resolveProtocol(tp));
             req.setTtl(ttl);
             req.setAutoHeartbeat(true);
-            req.setMetadata(buildMetadata(cardJson, tp));
+            Map<String, String> meta = buildMetadata(cardJson, tp);
+            meta.put(PolarisA2aConstants.META_AGENT_NAME, agentCard.name());
+            req.setMetadata(meta);
 
             try {
                 InstanceRegisterResponse resp = providerAPI.registerInstance(req);
@@ -97,6 +101,7 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
 
     private static Map<String, String> buildMetadata(String cardJson, TransportProperties tp) {
         Map<String, String> meta = new HashMap<>();
+
         meta.put(PolarisA2aConstants.META_AGENT_CARD, cardJson);
         if (tp.transportType() != null) {
             meta.put(PolarisA2aConstants.META_TRANSPORT, tp.transportType());
