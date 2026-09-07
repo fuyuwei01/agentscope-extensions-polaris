@@ -1,0 +1,48 @@
+name: Snapshot
+
+on:
+  push:
+    branches:
+      - main
+      - release/*
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  check-snapshot:
+    runs-on: ubuntu-latest
+    outputs:
+      IS_SNAPSHOT: ${{ steps.check-deploy-type.outputs.IS_SNAPSHOT }}
+    steps:
+      - name: Checkout codes
+        uses: actions/checkout@v6
+      - name: Check deploy type
+        id: check-deploy-type
+        run: |
+          line="$(grep SNAPSHOT pom.xml || true)"
+          echo $line
+          if [ -n "$line" ]; then
+            echo "IS_SNAPSHOT=true" >> $GITHUB_OUTPUT
+          else
+            echo "IS_SNAPSHOT=false" >> $GITHUB_OUTPUT
+          fi
+  snapshot:
+    runs-on: ubuntu-latest
+    needs: check-snapshot
+    if: ${{ needs.check-snapshot.outputs.IS_SNAPSHOT == 'true' }}
+    steps:
+      - name: Checkout codes
+        uses: actions/checkout@v6
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          server-id: central-portal
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+      - name: Publish package
+        run: mvn clean deploy -B -U -Dmaven.test.skip=true
+        env:
+          MAVEN_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.CENTRAL_PORTAL_TOKEN }}

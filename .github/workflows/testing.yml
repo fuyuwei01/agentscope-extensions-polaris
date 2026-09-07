@@ -1,0 +1,43 @@
+name: Testing
+
+on:
+  push:
+    branches:
+      - main
+      - release/*
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    branches:
+      - main
+      - release/*
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        java: [ 17, 21, 25 ]
+        os: [ 'ubuntu-latest', 'windows-latest' ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout codes
+        uses: actions/checkout@v6
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java }}
+          cache: 'maven'
+      - name: Test with Maven (Linux)
+        if: runner.os != 'Windows'
+        run: ./mvnw clean test -B -U --file pom.xml
+      - name: Test with Maven (Windows)
+        if: runner.os == 'Windows'
+        run: .\mvnw.cmd clean test -B -U --file pom.xml
+      - name: Upload coverage reports to Codecov
+        if: matrix.java == 25 && matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
