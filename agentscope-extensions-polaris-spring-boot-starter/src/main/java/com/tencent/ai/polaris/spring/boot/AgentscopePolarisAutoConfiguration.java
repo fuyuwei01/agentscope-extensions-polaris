@@ -18,6 +18,7 @@ package com.tencent.ai.polaris.spring.boot;
 
 import com.tencent.ai.polaris.core.PolarisContextManager;
 import com.tencent.ai.polaris.spring.boot.config.AgentScopePolarisProperties;
+import com.tencent.ai.polaris.spring.boot.config.skill.AgentScopePolarisSkillProperties;
 import com.tencent.ai.polaris.spring.boot.constants.PolarisConstants;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.AllNestedConditions;
@@ -31,14 +32,16 @@ import org.springframework.context.annotation.Conditional;
  * Shared Polaris connection auto-configuration for AgentScope.
  *
  * <p>Connection settings come from {@code agentscope.polaris} and produce a shared
- * {@link PolarisContextManager}. Feature beans (A2A, later skill/MCP) live in their own
+ * {@link PolarisContextManager}. Feature beans (A2A, skill, later MCP) live in their own
  * {@code @AutoConfiguration} classes ordered after this one.
  *
  * <p>{@code agentscope.polaris.enabled=false} (matchIfMissing {@code true}) skips creating
  * the context bean even when {@code address} is set.
  */
 @AutoConfiguration
-@EnableConfigurationProperties(AgentScopePolarisProperties.class)
+@EnableConfigurationProperties({
+        AgentScopePolarisProperties.class,
+        AgentScopePolarisSkillProperties.class})
 public class AgentscopePolarisAutoConfiguration {
 
     /**
@@ -50,7 +53,12 @@ public class AgentscopePolarisAutoConfiguration {
     @Bean(destroyMethod = "close")
     @Conditional(OnPolarisContextEnabled.class)
     @ConditionalOnMissingBean
-    public PolarisContextManager polarisContextManager(AgentScopePolarisProperties properties) {
+    public PolarisContextManager polarisContextManager(
+            AgentScopePolarisProperties properties,
+            AgentScopePolarisSkillProperties skillProperties) {
+        if (skillProperties.getAddress() != null && !skillProperties.getAddress().isBlank()) {
+            properties.setSkillAddress(skillProperties.getAddress());
+        }
         return new PolarisContextManager(properties);
     }
 

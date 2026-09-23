@@ -44,6 +44,19 @@ class PolarisContextManagerTest {
         assertEquals(List.of("10.0.0.1:8091", "10.0.0.2:8091"),
                 configuration.getGlobal().getServerConnector().getAddresses());
         assertEquals("secret-token", configuration.getGlobal().getServerConnector().getToken());
+        assertEquals(List.of("10.0.0.1:8094", "10.0.0.2:8094"),
+                configuration.getAi().getSkill().getServerConnector().getAddresses());
+    }
+
+    @Test
+    void applySkillConnectorAddressesWritesAiSkillServerConnector() {
+        PolarisServerProperties properties = new PolarisServerProperties("127.0.0.1:8091");
+        properties.setSkillAddress("127.0.0.1:8094,127.0.0.2:8094");
+
+        ConfigurationImpl configuration = PolarisContextManager.buildConfiguration(properties);
+
+        assertEquals(List.of("127.0.0.1:8094", "127.0.0.2:8094"),
+                configuration.getAi().getSkill().getServerConnector().getAddresses());
     }
 
     @Test

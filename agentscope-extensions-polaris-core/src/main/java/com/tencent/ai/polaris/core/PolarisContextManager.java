@@ -16,6 +16,9 @@
 
 package com.tencent.ai.polaris.core;
 
+import static com.tencent.polaris.ai.factory.SkillAPIFactory.createSkillAPIByContext;
+
+import com.tencent.polaris.ai.api.core.SkillAPI;
 import com.tencent.polaris.api.config.Configuration;
 import com.tencent.polaris.api.core.ConsumerAPI;
 import com.tencent.polaris.api.core.ProviderAPI;
@@ -25,9 +28,12 @@ import com.tencent.polaris.factory.ConfigAPIFactory;
 import com.tencent.polaris.factory.api.DiscoveryAPIFactory;
 
 import com.tencent.polaris.factory.config.ConfigurationImpl;
+import com.tencent.polaris.factory.config.ai.AiConfigImpl;
 import com.tencent.polaris.factory.config.global.GlobalConfigImpl;
 import com.tencent.polaris.factory.config.global.ServerConnectorConfigImpl;
 import com.tencent.polaris.factory.config.provider.LosslessConfigImpl;
+import com.tencent.polaris.factory.config.skill.SkillConfigImpl;
+import com.tencent.polaris.factory.config.skill.SkillConnectorConfigImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,8 +47,10 @@ import java.util.Objects;
  * all share one connection and one set of plugins.
  *
  * <p>Not a static singleton: callers build it explicitly (e.g.
- * {@code PolarisContextManager.fromAddress(addr)}) and pass it down. In a Spring Boot
- * starter it would be a {@code @Bean}.
+ * {@code PolarisContextManager.fromAddress(addr)}) and pass it down. Discovery uses
+ * {@link PolarisServerProperties#getAddress()} (8091); SkillAPI uses
+ * {@link PolarisServerProperties#getSkillAddress()} (8094). In a Spring Boot starter it
+ * would be a {@code @Bean}.
  */
 public class PolarisContextManager implements AutoCloseable {
 
@@ -52,12 +60,23 @@ public class PolarisContextManager implements AutoCloseable {
     private final SDKContext sdkContext;
     private final ProviderAPI providerAPI;
     private final ConsumerAPI consumerAPI;
+    private final SkillAPI skillAPI;
 
     /**
-     * Build a context from the given server address (e.g. {@code "127.0.0.1:8091"}).
+     * Build a context from the discovery address (e.g. {@code "127.0.0.1:8091"}).
+     * SkillAPI uses the same host on port {@link PolarisServerProperties#DEFAULT_SKILL_PORT}.
      */
     public static PolarisContextManager fromAddress(String address) {
         return fromAddress(List.of(address));
+    }
+
+    /**
+     * Build a context with an explicit SkillAPI address (e.g. {@code "127.0.0.1:8094"}).
+     */
+    public static PolarisContextManager fromAddress(String address, String skillAddress) {
+        PolarisServerProperties props = new PolarisServerProperties(address);
+        props.setSkillAddress(skillAddress);
+        return new PolarisContextManager(props);
     }
 
     public static PolarisContextManager fromAddress(List<String> addresses) {
@@ -77,6 +96,7 @@ public class PolarisContextManager implements AutoCloseable {
         SDKContext initializedContext = null;
         ProviderAPI initializedProviderAPI = null;
         ConsumerAPI initializedConsumerAPI = null;
+        SkillAPI initializedSkillAPI = null;
         try {
             log.debug("Initializing Polaris SDKContext");
             initializedContext = initContext(config);
@@ -84,6 +104,8 @@ public class PolarisContextManager implements AutoCloseable {
             initializedProviderAPI = createProviderAPI(initializedContext);
             log.debug("Creating Polaris ConsumerAPI");
             initializedConsumerAPI = createConsumerAPI(initializedContext);
+            log.debug("Creating Polaris SkillAPI");
+            initializedSkillAPI = createSkillAPI(initializedContext);
         } catch (RuntimeException e) {
             log.debug("Polaris SDK context initialization failed, closing partial resources: {}",
                     e.getMessage());
@@ -93,6 +115,7 @@ public class PolarisContextManager implements AutoCloseable {
         this.sdkContext = initializedContext;
         this.providerAPI = initializedProviderAPI;
         this.consumerAPI = initializedConsumerAPI;
+        this.skillAPI = initializedSkillAPI;
         log.info("Polaris SDK context ready: namespace={}, addresses={}",
                 properties.getNamespace(), addresses);
     }
@@ -111,11 +134,34 @@ public class PolarisContextManager implements AutoCloseable {
             log.debug("Applied Polaris server connector token");
         }
         globalConfig.getStatReporter().setEnable(false);
+        applySkillConnectorAddresses(config, properties.skillAddressList());
         LosslessConfigImpl losslessConfig = (LosslessConfigImpl) config.getProvider().getLossless();
         losslessConfig.setEnable(false);
-        log.debug("Polaris SDK configuration built: addresses={}, tokenConfigured={}, statReporter=false, lossless=false",
-                addresses, hasToken(token));
+        log.debug("Polaris SDK configuration built: addresses={}, skillAddresses={}, tokenConfigured={}, statReporter=false, lossless=false",
+                addresses, properties.skillAddressList(), hasToken(token));
         return config;
+    }
+
+    /**
+     * Write SkillAPI addresses into {@code ai.skill.serverConnector}.
+     */
+    static void applySkillConnectorAddresses(ConfigurationImpl config, List<String> skillAddresses) {
+        AiConfigImpl aiConfig = config.getAi();
+        if (aiConfig == null) {
+            aiConfig = new AiConfigImpl();
+            config.setAi(aiConfig);
+        }
+        SkillConfigImpl skillConfig = aiConfig.getSkill();
+        if (skillConfig == null) {
+            skillConfig = new SkillConfigImpl();
+            aiConfig.setSkill(skillConfig);
+        }
+        SkillConnectorConfigImpl skillConnector = skillConfig.getServerConnector();
+        if (skillConnector == null) {
+            skillConnector = new SkillConnectorConfigImpl();
+            skillConfig.setServerConnector(skillConnector);
+        }
+        skillConnector.setAddresses(skillAddresses);
     }
 
     private static boolean hasToken(String token) {
@@ -146,6 +192,14 @@ public class PolarisContextManager implements AutoCloseable {
         }
     }
 
+    private static SkillAPI createSkillAPI(SDKContext context) {
+        try {
+            return createSkillAPIByContext(context);
+        } catch (PolarisException e) {
+            throw new IllegalStateException("Failed to create polaris SkillAPI: " + e.getMessage(), e);
+        }
+    }
+
     public PolarisServerProperties getProperties() {
         return properties;
     }
@@ -160,6 +214,10 @@ public class PolarisContextManager implements AutoCloseable {
 
     public ConsumerAPI consumerAPI() {
         return consumerAPI;
+    }
+
+    public SkillAPI skillAPI() {
+        return skillAPI;
     }
 
     public String getNamespace() {

@@ -22,5 +22,28 @@
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-core</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.tencent.polaris</groupId>
+            <artifactId>polaris-ai-skill-factory</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.jupiter</groupId>
+                    <artifactId>junit-jupiter-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
     </dependencies>
 </project>

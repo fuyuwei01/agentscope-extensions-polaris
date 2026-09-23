@@ -33,6 +33,7 @@
 
     <modules>
         <module>a2a</module>
+        <module>skill</module>
     </modules>
 
     <!-- Keep examples in the reactor / CI, but never publish them to Maven Central. -->

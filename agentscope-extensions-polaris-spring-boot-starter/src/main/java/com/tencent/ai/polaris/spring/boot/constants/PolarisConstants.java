@@ -20,15 +20,18 @@ package com.tencent.ai.polaris.spring.boot.constants;
  * Configuration-prefix constants for the Polaris Spring Boot starter.
  *
  * <p>Connection settings live under {@code agentscope.polaris}. Feature-specific settings
- * (currently A2A registry/discovery) are nested under {@code agentscope.polaris.a2a}.
+ * (A2A registry/discovery, Skill repository) are nested under that prefix.
  */
 public final class PolarisConstants {
 
     private PolarisConstants() {
     }
 
-    /** {@code agentscope.polaris} — shared connection config (address/namespace/token). */
+    /** {@code agentscope.polaris} — shared connection config (address/skill-address/namespace/token). */
     public static final String POLARIS_PREFIX = "agentscope.polaris";
+
+    /** {@code agentscope.polaris.skill} — AgentScope skill repository switch and settings. */
+    public static final String SKILL_POLARIS_PREFIX = POLARIS_PREFIX + ".skill";
 
     /** {@code agentscope.polaris.a2a} — A2A total switch + registry/discovery behavior. */
     public static final String A2A_POLARIS_PREFIX = POLARIS_PREFIX + ".a2a";

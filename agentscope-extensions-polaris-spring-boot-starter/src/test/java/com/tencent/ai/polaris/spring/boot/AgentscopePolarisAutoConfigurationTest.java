@@ -182,6 +182,7 @@ class AgentscopePolarisAutoConfigurationTest {
                 .withUserConfiguration(PropertiesOnlyConfig.class)
                 .withPropertyValues(
                         "agentscope.polaris.address=10.0.0.1:8091",
+                        "agentscope.polaris.skill-address=10.0.0.1:8094",
                         "agentscope.polaris.namespace=prod",
                         "agentscope.polaris.token=secret",
                         "agentscope.polaris.a2a.enabled=true",
@@ -190,6 +191,7 @@ class AgentscopePolarisAutoConfigurationTest {
                     AgentScopePolarisProperties polarisProps =
                             context.getBean(AgentScopePolarisProperties.class);
                     assertThat(polarisProps.getAddress()).isEqualTo("10.0.0.1:8091");
+                    assertThat(polarisProps.getSkillAddress()).isEqualTo("10.0.0.1:8094");
                     assertThat(polarisProps.getNamespace()).isEqualTo("prod");
                     assertThat(polarisProps.getToken()).isEqualTo("secret");
 

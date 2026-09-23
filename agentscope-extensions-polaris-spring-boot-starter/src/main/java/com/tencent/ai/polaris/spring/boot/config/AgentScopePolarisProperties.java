@@ -29,6 +29,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *   polaris:
  *     enabled: true
  *     address: 127.0.0.1:8091
+ *     skill-address: 127.0.0.1:8094
  *     namespace: default
  *     token: <service_token>
  * }</pre>
