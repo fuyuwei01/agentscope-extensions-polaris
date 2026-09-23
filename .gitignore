@@ -50,9 +50,13 @@ applog/
 .codebuddy/
 CLAUDE.md
 .claude/
+.env
 
 # Maven ignore
 .flattened-pom.xml
+
+# Local git worktrees (SDD isolation)
+.worktrees/
 
 # Polaris
 */backup

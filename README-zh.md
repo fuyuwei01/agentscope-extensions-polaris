@@ -27,11 +27,13 @@ AgentScope 集成北极星可以解决以下问题：
 
 ```
 agentscope-extensions-polaris (root)
-├── agentscope-extensions-polaris-bom      # 版本管理 BOM
-├── agentscope-extensions-polaris-core     # Polaris SDK 封装（polaris-all）
-├── agentscope-extensions-polaris-mcp      # MCP 扩展
-├── agentscope-extensions-polaris-a2a      # A2A 扩展
-└── agentscope-extensions-polaris-skill    # Skill 扩展
+├── agentscope-extensions-polaris-bom                 # 版本管理 BOM
+├── agentscope-extensions-polaris-core                # Polaris SDK 封装（polaris-all）
+├── agentscope-extensions-polaris-mcp                 # MCP 扩展
+├── agentscope-extensions-polaris-a2a                 # A2A 注册 / 发现
+├── agentscope-extensions-polaris-skill               # Skill 扩展
+├── agentscope-extensions-polaris-spring-boot-starter # Spring Boot 自动装配（Boot 3.2+）
+└── agentscope-extensions-polaris-example             # 示例（不发布）
 ```
 
 ## 如何构建

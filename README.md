@@ -27,11 +27,13 @@ AgentScope with Polaris can solve these problems:
 
 ```
 agentscope-extensions-polaris (root)
-├── agentscope-extensions-polaris-bom      # Bill of Materials
-├── agentscope-extensions-polaris-core     # Polaris SDK wrapper (polaris-all)
-├── agentscope-extensions-polaris-mcp      # MCP extension
-├── agentscope-extensions-polaris-a2a      # A2A extension
-└── agentscope-extensions-polaris-skill    # Skill extension
+├── agentscope-extensions-polaris-bom                 # Bill of Materials
+├── agentscope-extensions-polaris-core                # Polaris SDK wrapper (polaris-all)
+├── agentscope-extensions-polaris-mcp                 # MCP extension
+├── agentscope-extensions-polaris-a2a                 # A2A registry / discovery
+├── agentscope-extensions-polaris-skill               # Skill extension
+├── agentscope-extensions-polaris-spring-boot-starter # Spring Boot auto-config (Boot 3.2+)
+└── agentscope-extensions-polaris-example             # Examples (not published)
 ```
 
 ## How to Build

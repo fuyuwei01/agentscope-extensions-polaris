@@ -65,6 +65,13 @@
                 <version>${revision}</version>
             </dependency>
 
+            <!-- Spring Boot Starter -->
+            <dependency>
+                <groupId>com.tencent.ai.polaris</groupId>
+                <artifactId>agentscope-extensions-polaris-spring-boot-starter</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
             <!-- Skill -->
             <dependency>
                 <groupId>com.tencent.ai.polaris</groupId>

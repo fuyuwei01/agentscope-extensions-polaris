@@ -1,0 +1,20 @@
+# A2A Spring Boot Client Example Configuration
+spring:
+  main:
+    banner-mode: off
+    web-application-type: none
+
+agentscope:
+  a2a:
+    agent-name: ${A2A_AGENT_NAME:polaris-a2a-example-agent}
+  polaris:
+    enabled: ${POLARIS_ENABLED:true}
+    address: ${POLARIS_ADDRESS:127.0.0.1:8091}
+    namespace: ${POLARIS_NAMESPACE:default}
+    token: ${POLARIS_TOKEN:}
+    a2a:
+      enabled: true
+      registry:
+        enabled: false
+      discovery:
+        enabled: true
