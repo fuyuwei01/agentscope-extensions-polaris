@@ -21,11 +21,8 @@ import com.tencent.polaris.ai.api.core.SkillAPI;
 import com.tencent.polaris.api.core.ConsumerAPI;
 import com.tencent.polaris.api.exception.PolarisException;
 import com.tencent.polaris.api.pojo.ExtendedMetadata;
-import com.tencent.polaris.api.pojo.ServiceInfo;
 import com.tencent.polaris.api.rpc.GetAllInstancesRequest;
-import com.tencent.polaris.api.rpc.GetServicesRequest;
 import com.tencent.polaris.api.rpc.InstancesResponse;
-import com.tencent.polaris.api.rpc.ServicesResponse;
 import io.agentscope.core.skill.AgentSkill;
 import io.agentscope.core.skill.repository.AgentSkillRepositoryInfo;
 import org.slf4j.Logger;
@@ -287,7 +284,7 @@ public class PolarisMountedSkillRepository extends PolarisSkillRepository {
         InstancesResponse resp = consumerAPI.getAllInstances(req);
         if (resp == null || resp.getServiceInstances() == null) {
             if (log.isDebugEnabled()) {
-                log.debug("GetServices returned no services for {}/{}", namespace, serviceName);
+                log.debug("GetAllInstances returned no instances for {}/{}", namespace, serviceName);
             }
             return null;
         }

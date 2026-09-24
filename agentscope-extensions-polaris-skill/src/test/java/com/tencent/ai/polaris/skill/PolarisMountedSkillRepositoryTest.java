@@ -33,12 +33,12 @@ import com.tencent.polaris.api.core.ConsumerAPI;
 import com.tencent.polaris.api.exception.ServerCodes;
 import com.tencent.polaris.api.plugin.skill.SkillDownloadRequest;
 import com.tencent.polaris.api.plugin.skill.SkillDownloadResponse;
+import com.tencent.polaris.api.pojo.DefaultServiceInstances;
 import com.tencent.polaris.api.pojo.ExtendedMetadata;
-import com.tencent.polaris.api.pojo.ServiceInfo;
+import com.tencent.polaris.api.pojo.ServiceInstances;
 import com.tencent.polaris.api.pojo.ServiceKey;
-import com.tencent.polaris.api.pojo.Services;
-import com.tencent.polaris.api.rpc.GetServicesRequest;
-import com.tencent.polaris.api.rpc.ServicesResponse;
+import com.tencent.polaris.api.rpc.GetAllInstancesRequest;
+import com.tencent.polaris.api.rpc.InstancesResponse;
 import io.agentscope.core.skill.AgentSkill;
 import io.agentscope.core.skill.repository.AgentSkillRepositoryInfo;
 import java.io.ByteArrayOutputStream;
@@ -115,14 +115,15 @@ class PolarisMountedSkillRepositoryTest {
 
     @Test
     void getAllSkillNamesReturnsMountedNamesWithoutDownloading() {
-        when(consumerAPI.getServices(any())).thenReturn(servicesResponse(serviceWithSkills("sql-analysis")));
+        when(consumerAPI.getAllInstances(any())).thenReturn(serviceWithSkills("sql-analysis"));
 
         assertEquals(List.of("sql-analysis"), repository.getAllSkillNames());
         verify(skillAPI, never()).downloadSkill(any());
         verify(skillAPI, never()).listSkills(any());
 
-        ArgumentCaptor<GetServicesRequest> captor = ArgumentCaptor.forClass(GetServicesRequest.class);
-        verify(consumerAPI).getServices(captor.capture());
+        ArgumentCaptor<GetAllInstancesRequest> captor =
+                ArgumentCaptor.forClass(GetAllInstancesRequest.class);
+        verify(consumerAPI).getAllInstances(captor.capture());
         assertEquals("default", captor.getValue().getNamespace());
         assertEquals("demo-agent", captor.getValue().getService());
     }
@@ -135,22 +136,22 @@ class PolarisMountedSkillRepositoryTest {
                         .id("default:sql-analysis")
                         .build())
                 .build();
-        when(consumerAPI.getServices(any())).thenReturn(servicesResponse(serviceWithMetadata(meta)));
+        when(consumerAPI.getAllInstances(any())).thenReturn(serviceWithMetadata(meta));
 
         assertEquals(List.of("sql-analysis"), repository.getAllSkillNames());
     }
 
     @Test
     void getAllSkillNamesDeduplicatesSkillNames() {
-        when(consumerAPI.getServices(any()))
-                .thenReturn(servicesResponse(serviceWithSkills("sql-analysis", "sql-analysis")));
+        when(consumerAPI.getAllInstances(any()))
+                .thenReturn(serviceWithSkills("sql-analysis", "sql-analysis"));
 
         assertEquals(List.of("sql-analysis"), repository.getAllSkillNames());
     }
 
     @Test
     void getAllSkillNamesEmptyWhenServiceMissing() {
-        when(consumerAPI.getServices(any())).thenReturn(servicesResponse());
+        when(consumerAPI.getAllInstances(any())).thenReturn(serviceWithMetadata());
 
         assertEquals(List.of(), repository.getAllSkillNames());
         verify(skillAPI, never()).downloadSkill(any());
@@ -158,41 +159,41 @@ class PolarisMountedSkillRepositoryTest {
 
     @Test
     void getAllSkillNamesSplitsNamespacePrefix() {
-        when(consumerAPI.getServices(any()))
-                .thenReturn(servicesResponse(serviceWithMountedNames("default:sql-analysis")));
+        when(consumerAPI.getAllInstances(any()))
+                .thenReturn(serviceWithMountedNames("default:sql-analysis"));
 
         assertEquals(List.of("sql-analysis"), repository.getAllSkillNames());
     }
 
     @Test
     void getAllSkillNamesKeepsColonsInsideSkillName() {
-        when(consumerAPI.getServices(any()))
-                .thenReturn(servicesResponse(serviceWithMountedNames("default:svg:architecture:diagram")));
+        when(consumerAPI.getAllInstances(any()))
+                .thenReturn(serviceWithMountedNames("default:svg:architecture:diagram"));
 
         assertEquals(List.of("svg:architecture:diagram"), repository.getAllSkillNames());
     }
 
     @Test
     void getAllSkillNamesSkipsDifferentNamespace() {
-        when(consumerAPI.getServices(any()))
-                .thenReturn(servicesResponse(serviceWithMountedNames(
-                        "default:sql-analysis", "prod:chart-rendering")));
+        when(consumerAPI.getAllInstances(any()))
+                .thenReturn(serviceWithMountedNames(
+                        "default:sql-analysis", "prod:chart-rendering"));
 
         assertEquals(List.of("sql-analysis"), repository.getAllSkillNames());
     }
 
     @Test
     void getAllSkillNamesSkipsNameWithoutNamespacePrefix() {
-        when(consumerAPI.getServices(any()))
-                .thenReturn(servicesResponse(serviceWithMountedNames("sql-analysis")));
+        when(consumerAPI.getAllInstances(any()))
+                .thenReturn(serviceWithMountedNames("sql-analysis"));
 
         assertEquals(List.of(), repository.getAllSkillNames());
     }
 
     @Test
     void getSkillDownloadsSkillNameWithColons() throws Exception {
-        when(consumerAPI.getServices(any()))
-                .thenReturn(servicesResponse(serviceWithMountedNames("default:svg:architecture:diagram")));
+        when(consumerAPI.getAllInstances(any()))
+                .thenReturn(serviceWithMountedNames("default:svg:architecture:diagram"));
         when(skillAPI.downloadSkill(any()))
                 .thenReturn(successZip("svg:architecture:diagram", "Draw SVG", "Use mermaid"));
 
@@ -207,7 +208,7 @@ class PolarisMountedSkillRepositoryTest {
 
     @Test
     void getSkillRejectsUnmountedName() {
-        when(consumerAPI.getServices(any())).thenReturn(servicesResponse(serviceWithSkills("sql-analysis")));
+        when(consumerAPI.getAllInstances(any())).thenReturn(serviceWithSkills("sql-analysis"));
 
         IllegalArgumentException e = assertThrows(
                 IllegalArgumentException.class, () -> repository.getSkill("other-skill"));
@@ -217,7 +218,7 @@ class PolarisMountedSkillRepositoryTest {
 
     @Test
     void getSkillDownloadsMountedSkill() throws Exception {
-        when(consumerAPI.getServices(any())).thenReturn(servicesResponse(serviceWithSkills("sql-analysis")));
+        when(consumerAPI.getAllInstances(any())).thenReturn(serviceWithSkills("sql-analysis"));
         when(skillAPI.downloadSkill(any())).thenReturn(successZip("sql-analysis", "Analyze SQL", "Run EXPLAIN"));
 
         AgentSkill skill = repository.getSkill("sql-analysis");
@@ -238,7 +239,7 @@ class PolarisMountedSkillRepositoryTest {
     void getSkillSendsConfiguredVersion() throws Exception {
         repository = new PolarisMountedSkillRepository(
                 skillAPI, consumerAPI, "default", "demo-agent", "1.0.0");
-        when(consumerAPI.getServices(any())).thenReturn(servicesResponse(serviceWithSkills("sql-analysis")));
+        when(consumerAPI.getAllInstances(any())).thenReturn(serviceWithSkills("sql-analysis"));
         when(skillAPI.downloadSkill(any())).thenReturn(successZip("sql-analysis", "Analyze SQL", "Run EXPLAIN"));
 
         repository.getSkill("sql-analysis");
@@ -252,8 +253,8 @@ class PolarisMountedSkillRepositoryTest {
     void getSkillUsesVersionFromMountedMetadata() throws Exception {
         repository = new PolarisMountedSkillRepository(
                 skillAPI, consumerAPI, "default", "demo-agent", "1.0.0");
-        when(consumerAPI.getServices(any()))
-                .thenReturn(servicesResponse(serviceWithSkill("sql-analysis", "2.3.0")));
+        when(consumerAPI.getAllInstances(any()))
+                .thenReturn(serviceWithSkill("sql-analysis", "2.3.0"));
         when(skillAPI.downloadSkill(any())).thenReturn(successZip("sql-analysis", "Analyze SQL", "Run EXPLAIN"));
 
         repository.getSkill("sql-analysis");
@@ -265,9 +266,9 @@ class PolarisMountedSkillRepositoryTest {
 
     @Test
     void getAllSkillsUsePerSkillMountedVersions() throws Exception {
-        when(consumerAPI.getServices(any())).thenReturn(servicesResponse(serviceWithMetadata(
+        when(consumerAPI.getAllInstances(any())).thenReturn(serviceWithMetadata(
                 skillMetadata("default:sql-analysis", "2.3.0"),
-                skillMetadata("default:chart-rendering", "0.9.1"))));
+                skillMetadata("default:chart-rendering", "0.9.1")));
         when(skillAPI.downloadSkill(any())).thenAnswer(inv -> {
             SkillDownloadRequest req = inv.getArgument(0);
             return successZip(req.getName(), req.getName() + " desc", "body");
@@ -283,8 +284,8 @@ class PolarisMountedSkillRepositoryTest {
 
     @Test
     void getAllSkillsReturnsMountedSkillsOnly() throws Exception {
-        when(consumerAPI.getServices(any()))
-                .thenReturn(servicesResponse(serviceWithSkills("sql-analysis", "chart-rendering")));
+        when(consumerAPI.getAllInstances(any()))
+                .thenReturn(serviceWithSkills("sql-analysis", "chart-rendering"));
         when(skillAPI.downloadSkill(any())).thenAnswer(inv -> {
             SkillDownloadRequest req = inv.getArgument(0);
             return successZip(req.getName(), req.getName() + " desc", "body");
@@ -300,7 +301,7 @@ class PolarisMountedSkillRepositoryTest {
 
     @Test
     void skillExistsOnlyForMountedNames() {
-        when(consumerAPI.getServices(any())).thenReturn(servicesResponse(serviceWithSkills("sql-analysis")));
+        when(consumerAPI.getAllInstances(any())).thenReturn(serviceWithSkills("sql-analysis"));
 
         assertTrue(repository.skillExists("sql-analysis"));
         assertFalse(repository.skillExists("other-skill"));
@@ -325,32 +326,7 @@ class PolarisMountedSkillRepositoryTest {
         verify(consumerAPI, never()).destroy();
     }
 
-    private static ServicesResponse servicesResponse(ServiceInfo... infos) {
-        List<ServiceInfo> list = List.of(infos);
-        return new ServicesResponse(new Services() {
-            @Override
-            public ServiceKey getServiceKey() {
-                return null;
-            }
-
-            @Override
-            public List<ServiceInfo> getServices() {
-                return list;
-            }
-
-            @Override
-            public boolean isInitialized() {
-                return true;
-            }
-
-            @Override
-            public String getRevision() {
-                return "";
-            }
-        });
-    }
-
-    private static ServiceInfo serviceWithSkills(String... names) {
+    private static InstancesResponse serviceWithSkills(String... names) {
         ExtendedMetadata[] metas = new ExtendedMetadata[names.length];
         for (int i = 0; i < names.length; i++) {
             metas[i] = skillMetadata("default:" + names[i], "");
@@ -358,7 +334,7 @@ class PolarisMountedSkillRepositoryTest {
         return serviceWithMetadata(metas);
     }
 
-    private static ServiceInfo serviceWithMountedNames(String... mountedNames) {
+    private static InstancesResponse serviceWithMountedNames(String... mountedNames) {
         ExtendedMetadata[] metas = new ExtendedMetadata[mountedNames.length];
         for (int i = 0; i < mountedNames.length; i++) {
             metas[i] = skillMetadata(mountedNames[i], "");
@@ -366,7 +342,7 @@ class PolarisMountedSkillRepositoryTest {
         return serviceWithMetadata(metas);
     }
 
-    private static ServiceInfo serviceWithSkill(String name, String version) {
+    private static InstancesResponse serviceWithSkill(String name, String version) {
         return serviceWithMetadata(skillMetadata("default:" + name, version));
     }
 
@@ -380,12 +356,20 @@ class PolarisMountedSkillRepositoryTest {
                 .build();
     }
 
-    private static ServiceInfo serviceWithMetadata(ExtendedMetadata... metas) {
-        ServiceInfo info = new ServiceInfo();
-        info.setNamespace("default");
-        info.setService("demo-agent");
-        info.setExtendedMetadata(List.of(metas));
-        return info;
+    /**
+     * Mounted skills are read from the service instances: {@code extended_metadata} only travels
+     * on {@code ConsumerAPI.getAllInstances} responses.
+     */
+    private static InstancesResponse serviceWithMetadata(ExtendedMetadata... metas) {
+        List<ExtendedMetadata> extendedMetadata = List.of(metas);
+        ServiceInstances instances =
+                new DefaultServiceInstances(new ServiceKey("default", "demo-agent"), List.of()) {
+                    @Override
+                    public List<ExtendedMetadata> getExtendedMetadata() {
+                        return extendedMetadata;
+                    }
+                };
+        return new InstancesResponse(instances, null, null);
     }
 
     private static SkillDownloadResponse successZip(String name, String description, String body)

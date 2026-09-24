@@ -29,11 +29,11 @@ import com.tencent.polaris.ai.api.core.SkillAPI;
 import com.tencent.polaris.api.core.ConsumerAPI;
 import com.tencent.polaris.api.exception.ServerCodes;
 import com.tencent.polaris.api.plugin.skill.SkillDownloadResponse;
+import com.tencent.polaris.api.pojo.DefaultServiceInstances;
 import com.tencent.polaris.api.pojo.ExtendedMetadata;
-import com.tencent.polaris.api.pojo.ServiceInfo;
+import com.tencent.polaris.api.pojo.ServiceInstances;
 import com.tencent.polaris.api.pojo.ServiceKey;
-import com.tencent.polaris.api.pojo.Services;
-import com.tencent.polaris.api.rpc.ServicesResponse;
+import com.tencent.polaris.api.rpc.InstancesResponse;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.model.Model;
 import io.agentscope.core.skill.AgentSkill;
@@ -108,8 +108,8 @@ class AgentscopePolarisSkillAgentAutoConfigurationTest {
     void shouldLoadMountedSkillsIntoAgent() throws IOException {
         SkillAPI skillAPI = mock(SkillAPI.class);
         ConsumerAPI consumerAPI = mock(ConsumerAPI.class);
-        when(consumerAPI.getServices(any()))
-                .thenReturn(servicesResponse(serviceWithMountedSkill("default:weather")));
+        when(consumerAPI.getAllInstances(any()))
+                .thenReturn(serviceWithMountedSkill("default:weather"));
         when(skillAPI.downloadSkill(any()))
                 .thenReturn(successZip("weather", "Check the weather", "Ask the weather service."));
 
@@ -142,43 +142,22 @@ class AgentscopePolarisSkillAgentAutoConfigurationTest {
         return ctx;
     }
 
-    private static ServicesResponse servicesResponse(ServiceInfo... infos) {
-        List<ServiceInfo> list = List.of(infos);
-        return new ServicesResponse(new Services() {
-            @Override
-            public ServiceKey getServiceKey() {
-                return null;
-            }
-
-            @Override
-            public List<ServiceInfo> getServices() {
-                return list;
-            }
-
-            @Override
-            public boolean isInitialized() {
-                return true;
-            }
-
-            @Override
-            public String getRevision() {
-                return "";
-            }
-        });
-    }
-
-    private static ServiceInfo serviceWithMountedSkill(String mountedName) {
-        ServiceInfo info = new ServiceInfo();
-        info.setNamespace("default");
-        info.setService("demo-agent");
-        info.setExtendedMetadata(List.of(ExtendedMetadata.builder()
+    private static InstancesResponse serviceWithMountedSkill(String mountedName) {
+        List<ExtendedMetadata> extendedMetadata = List.of(ExtendedMetadata.builder()
                 .type(ExtendedMetadata.ExtendedMetadataType.SKILL)
                 .agentSkill(com.tencent.polaris.api.pojo.AgentSkill.builder()
                         .name(mountedName)
                         .version("")
                         .build())
-                .build()));
-        return info;
+                .build());
+        ServiceInstances instances =
+                new DefaultServiceInstances(new ServiceKey("default", "demo-agent"), List.of()) {
+                    @Override
+                    public List<ExtendedMetadata> getExtendedMetadata() {
+                        return extendedMetadata;
+                    }
+                };
+        return new InstancesResponse(instances, null, null);
     }
 
     private static SkillDownloadResponse successZip(String name, String description, String body)
