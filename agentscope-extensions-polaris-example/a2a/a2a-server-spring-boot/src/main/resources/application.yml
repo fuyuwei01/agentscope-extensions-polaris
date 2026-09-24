@@ -5,6 +5,11 @@ server:
 spring:
   main:
     banner-mode: off
+  mvc:
+    async:
+      # A2A message/stream is a long-lived SSE request. Keep the Servlet async
+      # request alive while the model is reasoning or executing tools.
+      request-timeout: ${A2A_STREAM_TIMEOUT:10m}
 
 agentscope:
   # Model options:
