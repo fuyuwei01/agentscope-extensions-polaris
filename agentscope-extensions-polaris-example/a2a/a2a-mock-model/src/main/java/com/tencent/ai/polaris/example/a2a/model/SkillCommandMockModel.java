@@ -14,7 +14,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package com.tencent.ai.polaris.example.a2a.server;
+package com.tencent.ai.polaris.example.a2a.model;
 
 import io.agentscope.core.message.ContentBlock;
 import io.agentscope.core.message.Msg;
@@ -27,13 +27,12 @@ import io.agentscope.core.model.ChatUsage;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.Model;
 import io.agentscope.core.model.ToolSchema;
-import reactor.core.publisher.Flux;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import reactor.core.publisher.Flux;
 
 /**
  * Offline stand-in for a chat model that answers the two skill commands deterministically.
@@ -48,7 +47,7 @@ import java.util.regex.Pattern;
  * Any other input returns a short usage hint. Requires {@code maxIters >= 2} so the agent can
  * run the tool call and come back for the final answer.
  */
-final class SkillCommandMockModel implements Model {
+public final class SkillCommandMockModel implements Model {
 
     private static final String LOAD_SKILL_TOOL = "load_skill_through_path";
     private static final String SKILL_MARKDOWN = "SKILL.md";
@@ -57,7 +56,8 @@ final class SkillCommandMockModel implements Model {
 
     private static final Pattern AVAILABLE_SKILLS =
             Pattern.compile("<available_skills>(.*?)</available_skills>", Pattern.DOTALL);
-    private static final Pattern SKILL_BLOCK = Pattern.compile("<skill>(.*?)</skill>", Pattern.DOTALL);
+    private static final Pattern SKILL_BLOCK =
+            Pattern.compile("<skill>(.*?)</skill>", Pattern.DOTALL);
 
     private static final String USAGE = "Mock model (no LLM configured). Supported commands:\n"
             + "  " + LIST_COMMAND + "     list the skills pulled from Polaris\n"
@@ -87,7 +87,8 @@ final class SkillCommandMockModel implements Model {
     }
 
     private static boolean isLoadCommand(String input) {
-        return input.regionMatches(true, 0, LOAD_COMMAND + " ", 0, LOAD_COMMAND.length() + 1);
+        return input.regionMatches(
+                true, 0, LOAD_COMMAND + " ", 0, LOAD_COMMAND.length() + 1);
     }
 
     private ChatResponse loadSkill(String name, List<CatalogEntry> catalog) {
@@ -99,8 +100,6 @@ final class SkillCommandMockModel implements Model {
             return textResponse("No skill named '" + name + "' reached this agent.\n\n"
                     + renderCatalog(catalog));
         }
-        // ToolExecutor validates the raw JSON in getContent(), which is what streaming providers
-        // send; the input map alone is not enough.
         String arguments = "{\"skillId\":\"" + escapeJson(entry.skillId())
                 + "\",\"path\":\"" + SKILL_MARKDOWN + "\"}";
         ToolUseBlock toolUse = ToolUseBlock.builder()
@@ -127,10 +126,11 @@ final class SkillCommandMockModel implements Model {
 
     private static String renderCatalog(List<CatalogEntry> catalog) {
         if (catalog.isEmpty()) {
-            return "No skill was injected into the system prompt. Check that Polaris has published "
-                    + "skills and that they are mounted on the configured service.";
+            return "No skill was injected into the system prompt. Check that Polaris has "
+                    + "published skills and that they are mounted on the configured service.";
         }
-        StringBuilder text = new StringBuilder("Skills pulled from Polaris (" + catalog.size() + "):\n");
+        StringBuilder text =
+                new StringBuilder("Skills pulled from Polaris (" + catalog.size() + "):\n");
         for (CatalogEntry entry : catalog) {
             text.append("- ").append(entry.name());
             if (!entry.description().isEmpty()) {
@@ -138,15 +138,12 @@ final class SkillCommandMockModel implements Model {
             }
             text.append(" [skill-id=").append(entry.skillId()).append("]\n");
         }
-        text.append("\nRun '").append(LOAD_COMMAND).append(" <name>' to print a skill's SKILL.md.");
+        text.append("\nRun '")
+                .append(LOAD_COMMAND)
+                .append(" <name>' to print a skill's SKILL.md.");
         return text.toString();
     }
 
-    /**
-     * Parses the {@code <skill>} elements rendered by {@code AgentSkillPromptProvider}. Only the
-     * {@code <available_skills>} section is scanned, because the instruction text above it
-     * mentions {@code <skill>} and {@code <skill-id>} literally.
-     */
     private static List<CatalogEntry> parseCatalog(String systemText) {
         List<CatalogEntry> entries = new ArrayList<>();
         Matcher section = AVAILABLE_SKILLS.matcher(systemText);
@@ -193,9 +190,6 @@ final class SkillCommandMockModel implements Model {
                 .build();
     }
 
-    /**
-     * Returns the text of the newest tool result, or null when the last turn was not a tool call.
-     */
     private static String lastToolOutput(List<Msg> messages) {
         if (messages == null) {
             return null;

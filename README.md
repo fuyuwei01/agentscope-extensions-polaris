@@ -146,11 +146,23 @@ agentscope:
       address: ""          # empty => reuse the main host(s) with port 8094
       names: []
       version: ""
+      mounted:
+        enabled: false     # true => PolarisMountedSkillRepository
 ```
 
-If `names` is non-empty, the repository loads only those names and skips the list call. Wire the
-resulting `AgentSkillRepository` bean into `HarnessAgent` / `ReActAgent` the same way as other
-repository implementations.
+If `names` is non-empty, the repository loads only those names and skips the list call. When
+`mounted.enabled=true`, `names` / list queries are ignored and the bean reads skills mounted on
+the current agent service (`Service.extended_metadata`). The service name is
+`agentscope.a2a.server.card.name`, or `agentscope.agent.name` if the card name is blank.
+`mounted.service-name` can override that.
+
+The default `agentscope.agent` `ReActAgent` of the AgentScope starter is built without a
+`SkillBox`, so the repository bean alone never reaches it. This starter therefore declares the
+same `ReActAgent` bean ahead of `AgentscopeAutoConfiguration` — same name, system prompt and
+`max-iters`, plus a `SkillBox` holding the Polaris skills — and the AgentScope one backs off
+through its `@ConditionalOnMissingBean`. Set `agentscope.polaris.skill.attach-to-agent=false` to
+keep the AgentScope agent. Applications that build their own agent can keep injecting the
+`AgentSkillRepository` bean into `HarnessAgent` / `ReActAgent` as usual.
 
 ### Notes
 

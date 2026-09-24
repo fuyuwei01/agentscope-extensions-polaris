@@ -41,4 +41,10 @@ public final class PolarisConstants {
 
     /** {@code agentscope.polaris.a2a.discovery} — discovery behavior ({@code enabled}). */
     public static final String A2A_POLARIS_DISCOVERY_PREFIX = A2A_POLARIS_PREFIX + ".discovery";
+
+    /** {@code agentscope.a2a.server.card.name} — A2A agent card name used as mounted-skill service. */
+    public static final String A2A_SERVER_CARD_NAME = "agentscope.a2a.server.card.name";
+
+    /** {@code agentscope.agent.name} — default ReAct agent name. */
+    public static final String AGENT_NAME = "agentscope.agent.name";
 }

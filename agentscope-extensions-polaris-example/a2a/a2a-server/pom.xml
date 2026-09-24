@@ -31,6 +31,13 @@
     <description>Hosts an A2A agent and registers it to Polaris</description>
 
     <dependencies>
+        <!-- Shared offline models used when no real LLM is configured -->
+        <dependency>
+            <groupId>com.tencent.ai.polaris</groupId>
+            <artifactId>agentscope-extensions-polaris-example-a2a-mock-model</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
         <!-- Polaris A2A extension (PolarisAgentRegistry) -->
         <dependency>
             <groupId>com.tencent.ai.polaris</groupId>

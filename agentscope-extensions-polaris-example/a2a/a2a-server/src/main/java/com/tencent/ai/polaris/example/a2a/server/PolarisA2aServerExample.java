@@ -22,6 +22,8 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import com.tencent.ai.polaris.a2a.registry.PolarisAgentRegistry;
 import com.tencent.ai.polaris.core.PolarisContextManager;
+import com.tencent.ai.polaris.example.a2a.model.EchoLastUserInputModel;
+import com.tencent.ai.polaris.example.a2a.model.SkillCommandMockModel;
 import com.tencent.ai.polaris.skill.PolarisMountedSkillRepository;
 import com.tencent.ai.polaris.skill.PolarisSkillRepository;
 import io.a2a.spec.JSONRPCResponse;

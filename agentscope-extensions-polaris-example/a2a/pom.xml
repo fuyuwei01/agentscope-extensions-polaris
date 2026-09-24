@@ -32,6 +32,7 @@
     <description>A2A agent examples for AgentScope Extensions Polaris</description>
 
     <modules>
+        <module>a2a-mock-model</module>
         <module>a2a-server</module>
         <module>a2a-client</module>
         <module>a2a-server-spring-boot</module>

@@ -17,6 +17,7 @@
 package com.tencent.ai.polaris.spring.boot.skill;
 
 import com.tencent.ai.polaris.core.PolarisContextManager;
+import com.tencent.ai.polaris.skill.PolarisMountedSkillRepository;
 import com.tencent.ai.polaris.skill.PolarisSkillRepository;
 import com.tencent.ai.polaris.spring.boot.AgentscopePolarisAutoConfiguration;
 import com.tencent.ai.polaris.spring.boot.config.skill.AgentScopePolarisSkillProperties;
@@ -30,6 +31,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 
 /**
  * AgentScope skill repository auto-configuration backed by Polaris SkillAPI.
@@ -48,15 +50,27 @@ public class AgentscopePolarisSkillAutoConfiguration {
     /**
      * Creates the Polaris-backed AgentScope skill repository.
      *
+     * <p>{@code agentscope.polaris.skill.mounted.enabled=true} binds
+     * {@link PolarisMountedSkillRepository}. The service name is
+     * {@code skill.mounted.service-name}, else {@code agentscope.a2a.server.card.name},
+     * else {@code agentscope.agent.name}. Otherwise this is a published-skill
+     * {@link PolarisSkillRepository}.
+     *
      * @param context shared Polaris SDK context
      * @param skillProps skill repository settings
+     * @param environment application environment for A2A / agent name fallbacks
      * @return the Polaris-backed {@link AgentSkillRepository}
      */
     @Bean
     @ConditionalOnMissingBean(AgentSkillRepository.class)
     public AgentSkillRepository polarisSkillRepository(
             PolarisContextManager context,
-            AgentScopePolarisSkillProperties skillProps) {
+            AgentScopePolarisSkillProperties skillProps,
+            Environment environment) {
+        if (skillProps.getMounted() != null && skillProps.getMounted().isEnabled()) {
+            return new PolarisMountedSkillRepository(
+                    context, resolveMountedServiceName(skillProps, environment), skillProps.getVersion());
+        }
         return new PolarisSkillRepository(
                 context,
                 skillProps.getVersion(),
@@ -64,5 +78,33 @@ public class AgentscopePolarisSkillAutoConfiguration {
                 skillProps.getListLimit(),
                 skillProps.getMaxSkills(),
                 skillProps.getListRefreshIntervalMs());
+    }
+
+    static String resolveMountedServiceName(
+            AgentScopePolarisSkillProperties skillProps, Environment environment) {
+        String serviceName = firstNonBlank(
+                skillProps.getMounted() == null ? null : skillProps.getMounted().getServiceName(),
+                environment.getProperty(PolarisConstants.A2A_SERVER_CARD_NAME),
+                environment.getProperty(PolarisConstants.AGENT_NAME));
+        if (serviceName.isEmpty()) {
+            throw new IllegalStateException(
+                    "Cannot resolve Polaris mounted skill service name when "
+                            + "agentscope.polaris.skill.mounted.enabled=true. Set "
+                            + "agentscope.a2a.server.card.name or agentscope.agent.name"
+                            + " (or agentscope.polaris.skill.mounted.service-name to override)");
+        }
+        return serviceName;
+    }
+
+    private static String firstNonBlank(String... values) {
+        if (values == null) {
+            return "";
+        }
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return "";
     }
 }

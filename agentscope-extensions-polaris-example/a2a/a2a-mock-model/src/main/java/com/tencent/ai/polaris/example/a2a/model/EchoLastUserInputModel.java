@@ -14,7 +14,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package com.tencent.ai.polaris.example.a2a.server;
+package com.tencent.ai.polaris.example.a2a.model;
 
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
@@ -30,7 +30,7 @@ import reactor.core.publisher.Flux;
 /**
  * Offline stand-in for a chat model: each call echoes the latest user text.
  */
-final class EchoLastUserInputModel implements Model {
+public final class EchoLastUserInputModel implements Model {
 
     @Override
     public Flux<ChatResponse> stream(

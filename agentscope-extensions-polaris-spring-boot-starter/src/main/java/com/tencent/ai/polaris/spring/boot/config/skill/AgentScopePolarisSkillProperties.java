@@ -35,6 +35,12 @@ public class AgentScopePolarisSkillProperties {
     private int listLimit = 50;
     private int maxSkills = 100;
     private long listRefreshIntervalMs = 30000;
+    private PolarisSkillMountedProperties mounted = new PolarisSkillMountedProperties();
+    /**
+     * Whether the default {@code agentscope.agent} ReActAgent is replaced by one carrying the
+     * Polaris skills.
+     */
+    private boolean attachToAgent = true;
 
     public boolean isEnabled() {
         return enabled;
@@ -90,5 +96,21 @@ public class AgentScopePolarisSkillProperties {
 
     public void setListRefreshIntervalMs(long listRefreshIntervalMs) {
         this.listRefreshIntervalMs = listRefreshIntervalMs;
+    }
+
+    public PolarisSkillMountedProperties getMounted() {
+        return mounted;
+    }
+
+    public void setMounted(PolarisSkillMountedProperties mounted) {
+        this.mounted = mounted;
+    }
+
+    public boolean isAttachToAgent() {
+        return attachToAgent;
+    }
+
+    public void setAttachToAgent(boolean attachToAgent) {
+        this.attachToAgent = attachToAgent;
     }
 }

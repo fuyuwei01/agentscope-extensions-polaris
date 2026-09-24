@@ -1,3 +1,4 @@
 com.tencent.ai.polaris.spring.boot.AgentscopePolarisAutoConfiguration
 com.tencent.ai.polaris.spring.boot.a2a.AgentscopeA2aPolarisAutoConfiguration
 com.tencent.ai.polaris.spring.boot.skill.AgentscopePolarisSkillAutoConfiguration
+com.tencent.ai.polaris.spring.boot.skill.AgentscopePolarisSkillAgentAutoConfiguration

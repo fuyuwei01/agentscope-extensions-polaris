@@ -22,7 +22,9 @@ import com.tencent.polaris.api.core.ConsumerAPI;
 import com.tencent.polaris.api.exception.PolarisException;
 import com.tencent.polaris.api.pojo.ExtendedMetadata;
 import com.tencent.polaris.api.pojo.ServiceInfo;
+import com.tencent.polaris.api.rpc.GetAllInstancesRequest;
 import com.tencent.polaris.api.rpc.GetServicesRequest;
+import com.tencent.polaris.api.rpc.InstancesResponse;
 import com.tencent.polaris.api.rpc.ServicesResponse;
 import io.agentscope.core.skill.AgentSkill;
 import io.agentscope.core.skill.repository.AgentSkillRepositoryInfo;
@@ -259,52 +261,48 @@ public class PolarisMountedSkillRepository extends PolarisSkillRepository {
     }
 
     private Map<String, String> loadMountedSkills() {
-        ServiceInfo service;
+        List<ExtendedMetadata> extendedMetadata;
         try {
-            service = findService();
+            extendedMetadata = getServiceExtendedMetadata();
         } catch (PolarisException e) {
             throw new RuntimeException(
                     "Failed to load mounted skills from Polaris: " + serviceName, e);
         }
-        if (service == null) {
+        if (extendedMetadata == null) {
             if (log.isDebugEnabled()) {
                 log.debug("Service {}/{} not found, no mounted skills", namespace, serviceName);
             }
             return Map.of();
         }
-        return resolveMountedSkills(service, version);
+        return resolveMountedSkills(extendedMetadata, version);
     }
 
-    private ServiceInfo findService() throws PolarisException {
-        GetServicesRequest req = new GetServicesRequest();
+    private List<ExtendedMetadata> getServiceExtendedMetadata() throws PolarisException {
+        GetAllInstancesRequest req = new GetAllInstancesRequest();
         req.setNamespace(namespace);
         req.setService(serviceName);
         if (log.isDebugEnabled()) {
             log.debug("Looking up service {}/{} for mounted skills", namespace, serviceName);
         }
-        ServicesResponse resp = consumerAPI.getServices(req);
-        if (resp == null || resp.getServices() == null) {
+        InstancesResponse resp = consumerAPI.getAllInstances(req);
+        if (resp == null || resp.getServiceInstances() == null) {
             if (log.isDebugEnabled()) {
                 log.debug("GetServices returned no services for {}/{}", namespace, serviceName);
             }
             return null;
         }
-        for (ServiceInfo info : resp.getServices()) {
-            if (info != null && serviceName.equals(info.getService())) {
-                if (log.isDebugEnabled()) {
-                    int metaCount = info.getExtendedMetadata() == null
-                            ? 0 : info.getExtendedMetadata().size();
-                    log.debug("Found service {}/{} with {} extended metadata entries",
-                            namespace, serviceName, metaCount);
-                }
-                return info;
+        List<ExtendedMetadata> extendedMetadata = resp.getServiceInstances().getExtendedMetadata();
+        if (extendedMetadata == null || extendedMetadata.isEmpty()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Service {}/{} has no extended metadata", namespace, serviceName);
             }
+            return null;
         }
         if (log.isDebugEnabled()) {
-            log.debug("Service {}/{} missing from GetServices result ({} entries)",
-                    namespace, serviceName, resp.getServices().size());
+            log.debug("Service {}/{} has {} extended metadata, extended_metadata={}",
+                    namespace, serviceName, extendedMetadata.size(), extendedMetadata);
         }
-        return null;
+        return extendedMetadata;
     }
 
     /**
@@ -314,8 +312,7 @@ public class PolarisMountedSkillRepository extends PolarisSkillRepository {
      * colon is the separator, so {@code skillName} itself may contain colons. Entries whose
      * namespace does not match this repository are skipped.
      */
-    private Map<String, String> resolveMountedSkills(ServiceInfo service, String fallbackVersion) {
-        List<ExtendedMetadata> metas = service.getExtendedMetadata();
+    private Map<String, String> resolveMountedSkills(List<ExtendedMetadata> metas, String fallbackVersion) {
         if (metas == null || metas.isEmpty()) {
             if (log.isDebugEnabled()) {
                 log.debug("Service {}/{} has no extended metadata", namespace, serviceName);
@@ -390,7 +387,9 @@ public class PolarisMountedSkillRepository extends PolarisSkillRepository {
         return new MountedSkillRef(skillNamespace, skillName, raw);
     }
 
-    private record MountedSkillRef(String namespace, String name, String raw) {}
+    private record MountedSkillRef(String namespace, String name, String raw) {
+
+    }
 
     /**
      * Version carried by the mounted {@link com.tencent.polaris.api.pojo.AgentSkill} wins; when it

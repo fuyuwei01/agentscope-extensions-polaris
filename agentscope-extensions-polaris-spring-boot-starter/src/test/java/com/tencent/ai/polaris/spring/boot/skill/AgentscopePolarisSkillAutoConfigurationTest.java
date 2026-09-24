@@ -21,12 +21,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.tencent.ai.polaris.core.PolarisContextManager;
+import com.tencent.ai.polaris.skill.PolarisMountedSkillRepository;
 import com.tencent.ai.polaris.skill.PolarisSkillRepository;
 import com.tencent.ai.polaris.spring.boot.AgentscopePolarisAutoConfiguration;
 import com.tencent.polaris.ai.api.core.SkillAPI;
+import com.tencent.polaris.api.core.ConsumerAPI;
 import io.agentscope.core.skill.repository.AgentSkillRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.assertj.AssertableApplicationContext;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 /**
@@ -60,8 +63,49 @@ class AgentscopePolarisSkillAutoConfigurationTest {
                     assertThat(context).hasSingleBean(AgentSkillRepository.class);
                     assertThat(context).doesNotHaveBean(SkillAPI.class);
                     assertThat(context.getBean(AgentSkillRepository.class))
-                            .isInstanceOf(PolarisSkillRepository.class);
+                            .isExactlyInstanceOf(PolarisSkillRepository.class);
                 });
+    }
+
+    @Test
+    void shouldCreateMountedRepositoryWhenMountedEnabled() {
+        runner.withPropertyValues(
+                        "agentscope.polaris.skill.enabled=true",
+                        "agentscope.polaris.skill.mounted.enabled=true",
+                        "agentscope.polaris.skill.mounted.service-name=demo-agent",
+                        "agentscope.polaris.skill.version=v1")
+                .withBean(PolarisContextManager.class, AgentscopePolarisSkillAutoConfigurationTest::stubContextManager)
+                .run(context -> assertMountedSource(context, "demo-agent"));
+    }
+
+    @Test
+    void shouldUseA2aCardNameWhenMountedServiceNameBlank() {
+        runner.withPropertyValues(
+                        "agentscope.polaris.skill.enabled=true",
+                        "agentscope.polaris.skill.mounted.enabled=true",
+                        "agentscope.a2a.server.card.name=card-agent",
+                        "agentscope.agent.name=fallback-agent")
+                .withBean(PolarisContextManager.class, AgentscopePolarisSkillAutoConfigurationTest::stubContextManager)
+                .run(context -> assertMountedSource(context, "card-agent"));
+    }
+
+    @Test
+    void shouldUseAgentNameWhenCardNameBlank() {
+        runner.withPropertyValues(
+                        "agentscope.polaris.skill.enabled=true",
+                        "agentscope.polaris.skill.mounted.enabled=true",
+                        "agentscope.agent.name=react-agent")
+                .withBean(PolarisContextManager.class, AgentscopePolarisSkillAutoConfigurationTest::stubContextManager)
+                .run(context -> assertMountedSource(context, "react-agent"));
+    }
+
+    @Test
+    void shouldFailWhenMountedEnabledWithoutResolvableServiceName() {
+        runner.withPropertyValues(
+                        "agentscope.polaris.skill.enabled=true",
+                        "agentscope.polaris.skill.mounted.enabled=true")
+                .withBean(PolarisContextManager.class, AgentscopePolarisSkillAutoConfigurationTest::stubContextManager)
+                .run(context -> assertThat(context).hasFailed());
     }
 
     @Test
@@ -70,10 +114,19 @@ class AgentscopePolarisSkillAutoConfigurationTest {
                 .run(context -> assertThat(context).doesNotHaveBean(AgentSkillRepository.class));
     }
 
+    private static void assertMountedSource(
+            AssertableApplicationContext context, String serviceName) {
+        assertThat(context).hasSingleBean(AgentSkillRepository.class);
+        AgentSkillRepository repo = context.getBean(AgentSkillRepository.class);
+        assertThat(repo).isInstanceOf(PolarisMountedSkillRepository.class);
+        assertThat(repo.getSource()).isEqualTo("polaris-mounted:default/" + serviceName);
+    }
+
     private static PolarisContextManager stubContextManager() {
         PolarisContextManager ctx = mock(PolarisContextManager.class);
         when(ctx.getNamespace()).thenReturn("default");
         when(ctx.skillAPI()).thenReturn(mock(SkillAPI.class));
+        when(ctx.consumerAPI()).thenReturn(mock(ConsumerAPI.class));
         return ctx;
     }
 }

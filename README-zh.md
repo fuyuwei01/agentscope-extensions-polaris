@@ -140,10 +140,21 @@ agentscope:
       address: ""          # 空则复用主地址的 host，并把端口改为 8094
       names: []
       version: ""
+      mounted:
+        enabled: false     # true 时切到 PolarisMountedSkillRepository
 ```
 
-`names` 非空时，仓库只加载这些名字并跳过列表查询。把生成的 `AgentSkillRepository` bean
-接到 `HarnessAgent` / `ReActAgent` 上即可，方式和其它仓库实现一样。
+`names` 非空时，仓库只加载这些名字并跳过列表查询。`mounted.enabled=true` 时忽略 `names` / 列表查询，
+只读取当前 Agent 对应服务 `extended_metadata` 上挂载的技能。服务名默认取
+`agentscope.a2a.server.card.name`，为空再取 `agentscope.agent.name`；可用
+`mounted.service-name` 覆盖。
+
+AgentScope starter 里 `agentscope.agent` 生成的 `ReActAgent` 不带 `SkillBox`，只有仓库 bean 技能
+到不了 Agent。因此本 starter 会在 `AgentscopeAutoConfiguration` 之前声明同一个 `ReActAgent` bean
+（名字、system prompt、`max-iters` 都保持一致，额外挂上装有北极星技能的 `SkillBox`），AgentScope
+那个会因为 `@ConditionalOnMissingBean` 自动退让。想保留原来的 Agent，设
+`agentscope.polaris.skill.attach-to-agent=false`。自己构建 Agent 的应用照旧把
+`AgentSkillRepository` bean 接到 `HarnessAgent` / `ReActAgent` 上即可。
 
 ### 说明
 
