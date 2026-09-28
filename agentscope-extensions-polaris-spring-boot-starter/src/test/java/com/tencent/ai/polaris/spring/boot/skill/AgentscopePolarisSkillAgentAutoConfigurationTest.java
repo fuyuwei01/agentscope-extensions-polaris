@@ -65,7 +65,9 @@ class AgentscopePolarisSkillAgentAutoConfigurationTest {
 
     @Test
     void shouldBuildAgentWithPolarisSkills() {
-        runner.withPropertyValues("agentscope.agent.enabled=true")
+        runner.withPropertyValues(
+                        "agentscope.agent.enabled=true",
+                        "logging.level.com.tencent.ai.polaris.spring.boot.skill=DEBUG")
                 .run(context -> {
                     assertThat(context).hasSingleBean(ReActAgent.class);
                     assertThat(context.getBean(ReActAgent.class)).isNotNull();
@@ -82,6 +84,47 @@ class AgentscopePolarisSkillAgentAutoConfigurationTest {
                     assertThat(context.getBean(ReActAgent.class)).isNotNull();
                     verify(skillRepository, never()).getAllSkills();
                 });
+    }
+
+    @Test
+    void shouldBuildAgentWhenSkillLoadFails() {
+        AgentSkillRepository failing = mock(AgentSkillRepository.class);
+        when(failing.getAllSkills()).thenThrow(new IllegalStateException("down"));
+        when(failing.getSource()).thenReturn("polaris:default");
+
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        AgentscopePolarisSkillAgentAutoConfiguration.class,
+                        AgentscopeAutoConfiguration.class))
+                .withBean(Model.class, () -> mock(Model.class))
+                .withBean(AgentSkillRepository.class, () -> failing)
+                .withPropertyValues("agentscope.agent.enabled=true")
+                .run(context -> assertThat(context.getBean(ReActAgent.class)).isNotNull());
+    }
+
+    @Test
+    void shouldBuildAgentWhenRepositoryHasNoSkills() {
+        AgentSkillRepository empty = mock(AgentSkillRepository.class);
+        when(empty.getAllSkills()).thenReturn(List.of());
+        when(empty.getSource()).thenReturn("polaris:default");
+
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        AgentscopePolarisSkillAgentAutoConfiguration.class,
+                        AgentscopeAutoConfiguration.class))
+                .withBean(Model.class, () -> mock(Model.class))
+                .withBean(AgentSkillRepository.class, () -> empty)
+                .withPropertyValues("agentscope.agent.enabled=true")
+                .run(context -> assertThat(context.getBean(ReActAgent.class)).isNotNull());
+    }
+
+    @Test
+    void nestedConditionsCanBeConstructed() {
+        assertThat(new AgentscopePolarisSkillAgentAutoConfiguration.OnSkillAgentEnabled()).isNotNull();
+        assertThat(new AgentscopePolarisSkillAgentAutoConfiguration.OnSkillAgentEnabled.AgentEnabled())
+                .isNotNull();
+        assertThat(new AgentscopePolarisSkillAgentAutoConfiguration.OnSkillAgentEnabled.AttachEnabled())
+                .isNotNull();
     }
 
     @Test

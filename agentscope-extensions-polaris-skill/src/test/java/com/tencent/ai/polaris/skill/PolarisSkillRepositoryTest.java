@@ -19,7 +19,10 @@ package com.tencent.ai.polaris.skill;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -33,14 +36,21 @@ import com.tencent.polaris.api.exception.ErrorCode;
 import com.tencent.polaris.api.exception.ServerCodes;
 import com.tencent.polaris.api.plugin.skill.SkillDownloadRequest;
 import com.tencent.polaris.api.plugin.skill.SkillDownloadResponse;
+import com.tencent.polaris.api.plugin.skill.SkillListRequest;
 import com.tencent.polaris.api.plugin.skill.SkillListResponse;
 import com.tencent.polaris.api.plugin.skill.SkillResource;
 import com.tencent.polaris.api.plugin.skill.SkillVersionInfo;
 import io.agentscope.core.skill.AgentSkill;
+import io.agentscope.core.skill.repository.AgentSkillRepositoryInfo;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.BeforeEach;
@@ -147,6 +157,18 @@ class PolarisSkillRepositoryTest {
         assertEquals("A skill", skill.getDescription());
         assertEquals("Body", skill.getSkillContent());
         assertEquals("err", skill.getResource("assets/ERRORS.md"));
+    }
+
+    @Test
+    void getSkillSkipsDirectoryEntriesInFlatZip() throws Exception {
+        SkillDownloadResponse resp = new SkillDownloadResponse();
+        resp.setCode(ServerCodes.EXECUTE_SUCCESS);
+        resp.setZipContent(flatZipWithDirectory("sql-analysis", "Analyze SQL", "Run EXPLAIN"));
+        when(skillAPI.downloadSkill(any())).thenReturn(resp);
+
+        AgentSkill skill = repository.getSkill("sql-analysis");
+        assertEquals("sql-analysis", skill.getName());
+        assertEquals("Run EXPLAIN", skill.getSkillContent());
     }
 
     @Test
@@ -283,6 +305,170 @@ class PolarisSkillRepositoryTest {
     }
 
     @Test
+    void fromFactoryBindsContextNamespaceAndVersion() {
+        PolarisContextManager context = mock(PolarisContextManager.class);
+        when(context.skillAPI()).thenReturn(skillAPI);
+        when(context.getNamespace()).thenReturn("prod");
+
+        assertEquals("polaris:prod", PolarisSkillRepository.from(context).getSource());
+        assertEquals("polaris:prod", PolarisSkillRepository.from(context, "1.2.3").getSource());
+    }
+
+    @Test
+    void constructorNormalizesBlankInputs() {
+        PolarisSkillRepository created =
+                new PolarisSkillRepository(skillAPI, "  ", null, null, 0, 0, -1L);
+        assertEquals("polaris:default", created.getSource());
+        AgentSkillRepositoryInfo info = created.getRepositoryInfo();
+        assertEquals("polaris", info.getType());
+        assertEquals("namespace:default", info.getLocation());
+        assertFalse(info.isWritable());
+    }
+
+    @Test
+    void getSkillRejectsNullName() {
+        assertThrows(IllegalArgumentException.class, () -> repository.getSkill(null));
+    }
+
+    @Test
+    void getSkillTreatsEmptyZipAsNotFound() throws Exception {
+        SkillDownloadResponse resp = new SkillDownloadResponse();
+        resp.setCode(ServerCodes.EXECUTE_SUCCESS);
+        resp.setZipContent(new byte[0]);
+        when(skillAPI.downloadSkill(any())).thenReturn(resp);
+
+        IllegalArgumentException e =
+                assertThrows(IllegalArgumentException.class, () -> repository.getSkill("missing"));
+        assertEquals("Skill not found: missing", e.getMessage());
+    }
+
+    @Test
+    void skillExistsTrueAfterDownload() throws Exception {
+        SkillDownloadResponse resp = new SkillDownloadResponse();
+        resp.setCode(ServerCodes.EXECUTE_SUCCESS);
+        resp.setZipContent(skillZip("sql-analysis", "Analyze SQL", "Run EXPLAIN", null, (String) null));
+        when(skillAPI.downloadSkill(any())).thenReturn(resp);
+
+        assertFalse(repository.skillExists(" "));
+        assertTrue(repository.skillExists("sql-analysis"));
+    }
+
+    @Test
+    void skillExistsFalseWhenDownloadFails() throws Exception {
+        when(skillAPI.downloadSkill(any()))
+                .thenThrow(new PolarisException(ErrorCode.NETWORK_ERROR, "down"));
+        assertFalse(repository.skillExists("sql-analysis"));
+    }
+
+    @Test
+    void setWriteableIsIgnored() {
+        repository.setWriteable(true);
+        assertFalse(repository.isWriteable());
+    }
+
+    @Test
+    void getAllSkillsPaginatesUntilMaxSkills() throws Exception {
+        repository = new PolarisSkillRepository(skillAPI, "default", "", List.of(), 2, 2, 0L);
+        when(skillAPI.listSkills(any())).thenAnswer(inv -> {
+            SkillListRequest req = inv.getArgument(0);
+            SkillListResponse page = new SkillListResponse();
+            page.setCode(ServerCodes.EXECUTE_SUCCESS);
+            page.setTotal(4);
+            if (req.getOffset() == 0) {
+                SkillResource first = new SkillResource();
+                first.setName("first");
+                page.setResources(List.of(blankResource(), first));
+            } else {
+                SkillResource second = new SkillResource();
+                second.setName("second");
+                SkillResource third = new SkillResource();
+                third.setName("third");
+                page.setResources(List.of(second, third));
+            }
+            return page;
+        });
+
+        assertEquals(List.of("first", "second"), repository.getAllSkillNames());
+        verify(skillAPI, times(2)).listSkills(any());
+    }
+
+    @Test
+    void getAllSkillsWrapsListErrors() throws Exception {
+        doThrow(new PolarisException(ErrorCode.NETWORK_ERROR, "down"))
+                .when(skillAPI).listSkills(any());
+        RuntimeException listed =
+                assertThrows(RuntimeException.class, () -> repository.getAllSkillNames());
+        assertEquals("Failed to list skills from Polaris", listed.getMessage());
+
+        SkillListResponse failed = new SkillListResponse();
+        failed.setCode(500);
+        failed.setInfo("denied");
+        doReturn(failed).when(skillAPI).listSkills(any());
+        RuntimeException denied =
+                assertThrows(RuntimeException.class, () -> repository.getAllSkillNames());
+        assertEquals("Failed to list skills from Polaris: denied", denied.getMessage());
+    }
+
+    @Test
+    void getSkillKeepsInvalidZipBytes() throws Exception {
+        SkillDownloadResponse corrupt = new SkillDownloadResponse();
+        corrupt.setCode(ServerCodes.EXECUTE_SUCCESS);
+        corrupt.setZipContent(new byte[] {1, 2, 3});
+        when(skillAPI.downloadSkill(any())).thenReturn(corrupt);
+        assertThrows(RuntimeException.class, () -> repository.getSkill("sql-analysis"));
+
+        SkillDownloadResponse absolute = new SkillDownloadResponse();
+        absolute.setCode(ServerCodes.EXECUTE_SUCCESS);
+        absolute.setZipContent(namedEntryZip("/SKILL.md", "x"));
+        when(skillAPI.downloadSkill(any())).thenReturn(absolute);
+        assertThrows(RuntimeException.class, () -> repository.getSkill("sql-analysis"));
+
+        SkillDownloadResponse parent = new SkillDownloadResponse();
+        parent.setCode(ServerCodes.EXECUTE_SUCCESS);
+        parent.setZipContent(namedEntryZip("../SKILL.md", "x"));
+        when(skillAPI.downloadSkill(any())).thenReturn(parent);
+        assertThrows(RuntimeException.class, () -> repository.getSkill("sql-analysis"));
+    }
+
+    @Test
+    void getAllSkillNamesReusesListInsideRefreshLock() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        java.util.concurrent.CountDownLatch holding = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        when(skillAPI.listSkills(any())).thenAnswer(inv -> {
+            if (calls.incrementAndGet() == 1) {
+                holding.countDown();
+                release.await(3, TimeUnit.SECONDS);
+            }
+            SkillListResponse list = new SkillListResponse();
+            list.setCode(ServerCodes.EXECUTE_SUCCESS);
+            list.setResources(List.of());
+            list.setTotal(0);
+            return list;
+        });
+        CyclicBarrier start = new CyclicBarrier(2);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            pool.submit(() -> {
+                start.await();
+                repository.getAllSkillNames();
+                return null;
+            });
+            pool.submit(() -> {
+                start.await();
+                repository.getAllSkillNames();
+                return null;
+            });
+            holding.await(3, TimeUnit.SECONDS);
+            release.countDown();
+        } finally {
+            pool.shutdown();
+            pool.awaitTermination(3, TimeUnit.SECONDS);
+        }
+        verify(skillAPI, times(1)).listSkills(any());
+    }
+
+    @Test
     void closeDoesNotDestroySkillApi() {
         repository.close();
         verify(skillAPI, never()).destroy();
@@ -363,6 +549,36 @@ class PolarisSkillRepositoryTest {
                 zout.write(extraContent.getBytes(StandardCharsets.UTF_8));
                 zout.closeEntry();
             }
+        }
+        return bos.toByteArray();
+    }
+
+    private static SkillResource blankResource() {
+        SkillResource resource = new SkillResource();
+        resource.setName("  ");
+        return resource;
+    }
+
+    private static byte[] flatZipWithDirectory(String name, String description, String body)
+            throws IOException {
+        String md = "---\nname: " + name + "\ndescription: " + description + "\n---\n" + body;
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try (ZipOutputStream zout = new ZipOutputStream(bos)) {
+            zout.putNextEntry(new ZipEntry("assets/"));
+            zout.closeEntry();
+            zout.putNextEntry(new ZipEntry("SKILL.md"));
+            zout.write(md.getBytes(StandardCharsets.UTF_8));
+            zout.closeEntry();
+        }
+        return bos.toByteArray();
+    }
+
+    private static byte[] namedEntryZip(String entryName, String content) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try (ZipOutputStream zout = new ZipOutputStream(bos)) {
+            zout.putNextEntry(new ZipEntry(entryName));
+            zout.write(content.getBytes(StandardCharsets.UTF_8));
+            zout.closeEntry();
         }
         return bos.toByteArray();
     }

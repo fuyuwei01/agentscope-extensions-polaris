@@ -21,6 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -30,6 +32,8 @@ import static org.mockito.Mockito.when;
 import com.tencent.ai.polaris.core.PolarisContextManager;
 import com.tencent.polaris.ai.api.core.SkillAPI;
 import com.tencent.polaris.api.core.ConsumerAPI;
+import com.tencent.polaris.api.exception.ErrorCode;
+import com.tencent.polaris.api.exception.PolarisException;
 import com.tencent.polaris.api.exception.ServerCodes;
 import com.tencent.polaris.api.plugin.skill.SkillDownloadRequest;
 import com.tencent.polaris.api.plugin.skill.SkillDownloadResponse;
@@ -44,7 +48,13 @@ import io.agentscope.core.skill.repository.AgentSkillRepositoryInfo;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.BeforeEach;
@@ -93,6 +103,15 @@ class PolarisMountedSkillRepositoryTest {
                 IllegalArgumentException.class,
                 () -> new PolarisMountedSkillRepository(
                         skillAPI, null, "default", "demo-agent", ""));
+    }
+
+    @Test
+    void constructorFromContextRejectsBlankServiceName() {
+        PolarisContextManager context = mock(PolarisContextManager.class);
+        when(context.skillAPI()).thenReturn(skillAPI);
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new PolarisMountedSkillRepository(context, "  ", ""));
     }
 
     @Test
@@ -309,6 +328,109 @@ class PolarisMountedSkillRepositoryTest {
     }
 
     @Test
+    void fromFactoryBindsContext() {
+        PolarisContextManager context = mock(PolarisContextManager.class);
+        when(context.skillAPI()).thenReturn(skillAPI);
+        when(context.consumerAPI()).thenReturn(consumerAPI);
+        when(context.getNamespace()).thenReturn("prod");
+
+        assertEquals(
+                "polaris-mounted:prod/demo-agent",
+                PolarisMountedSkillRepository.from(context, "demo-agent").getSource());
+        assertEquals(
+                "polaris-mounted:prod/demo-agent",
+                PolarisMountedSkillRepository.from(context, "demo-agent", null).getSource());
+    }
+
+    @Test
+    void getSkillRejectsBlankName() {
+        assertThrows(IllegalArgumentException.class, () -> repository.getSkill(" "));
+        assertFalse(repository.skillExists(null));
+        assertFalse(repository.skillExists(" "));
+    }
+
+    @Test
+    void getAllSkillNamesEmptyWhenLookupFails() throws Exception {
+        doThrow(new PolarisException(ErrorCode.NETWORK_ERROR, "down"))
+                .when(consumerAPI).getAllInstances(any());
+        RuntimeException e =
+                assertThrows(RuntimeException.class, () -> repository.getAllSkillNames());
+        assertEquals("Failed to load mounted skills from Polaris: demo-agent", e.getMessage());
+
+        doReturn(null).when(consumerAPI).getAllInstances(any());
+        assertEquals(List.of(), repository.getAllSkillNames());
+    }
+
+    @Test
+    void getAllSkillNamesSkipsNonSkillMetadata() {
+        ExtendedMetadata other = ExtendedMetadata.builder().build();
+        ExtendedMetadata emptySkill = ExtendedMetadata.builder()
+                .type(ExtendedMetadata.ExtendedMetadataType.SKILL)
+                .build();
+        ExtendedMetadata blankIdentity = ExtendedMetadata.builder()
+                .type(ExtendedMetadata.ExtendedMetadataType.SKILL)
+                .agentSkill(com.tencent.polaris.api.pojo.AgentSkill.builder().build())
+                .build();
+        when(consumerAPI.getAllInstances(any())).thenReturn(serviceWithMetadata(
+                null, other, emptySkill, blankIdentity, skillMetadata(":", ""),
+                skillMetadata("default:", ""), skillMetadata(":sql", "")));
+
+        assertEquals(List.of(), repository.getAllSkillNames());
+    }
+
+    @Test
+    void getAllSkillsSkipsDownloadFailure() throws Exception {
+        when(consumerAPI.getAllInstances(any()))
+                .thenReturn(serviceWithSkills("sql-analysis", "chart-rendering"));
+        when(skillAPI.downloadSkill(any())).thenAnswer(inv -> {
+            com.tencent.polaris.api.plugin.skill.SkillDownloadRequest req = inv.getArgument(0);
+            if ("chart-rendering".equals(req.getName())) {
+                throw new PolarisException(ErrorCode.NETWORK_ERROR, "down");
+            }
+            return successZip(req.getName(), "Analyze SQL", "Run EXPLAIN");
+        });
+
+        List<AgentSkill> skills = repository.getAllSkills();
+        assertEquals(1, skills.size());
+        assertEquals("sql-analysis", skills.get(0).getName());
+        verify(consumerAPI, times(1)).getAllInstances(any());
+    }
+
+    @Test
+    void getAllSkillNamesReusesMountedCacheInsideRefreshLock() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        java.util.concurrent.CountDownLatch holding = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        when(consumerAPI.getAllInstances(any())).thenAnswer(inv -> {
+            if (calls.incrementAndGet() == 1) {
+                holding.countDown();
+                release.await(3, TimeUnit.SECONDS);
+            }
+            return serviceWithSkills("sql-analysis");
+        });
+        CyclicBarrier start = new CyclicBarrier(2);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            pool.submit(() -> {
+                start.await();
+                repository.getAllSkillNames();
+                return null;
+            });
+            pool.submit(() -> {
+                start.await();
+                repository.getAllSkillNames();
+                return null;
+            });
+            holding.await(3, TimeUnit.SECONDS);
+            release.countDown();
+        } finally {
+            pool.shutdown();
+            pool.awaitTermination(3, TimeUnit.SECONDS);
+        }
+        verify(consumerAPI, times(1)).getAllInstances(any());
+    }
+
+    @Test
     void writesRemainNoOps() {
         AgentSkill skill = new AgentSkill("local-skill", "Local desc", "Local body", java.util.Map.of());
         assertFalse(repository.save(List.of(skill), true));
@@ -361,7 +483,7 @@ class PolarisMountedSkillRepositoryTest {
      * on {@code ConsumerAPI.getAllInstances} responses.
      */
     private static InstancesResponse serviceWithMetadata(ExtendedMetadata... metas) {
-        List<ExtendedMetadata> extendedMetadata = List.of(metas);
+        List<ExtendedMetadata> extendedMetadata = Arrays.asList(metas);
         ServiceInstances instances =
                 new DefaultServiceInstances(new ServiceKey("default", "demo-agent"), List.of()) {
                     @Override

@@ -27,6 +27,7 @@ import com.tencent.ai.polaris.spring.boot.AgentscopePolarisAutoConfiguration;
 import com.tencent.polaris.ai.api.core.SkillAPI;
 import com.tencent.polaris.api.core.ConsumerAPI;
 import io.agentscope.core.skill.repository.AgentSkillRepository;
+import java.lang.reflect.Method;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.assertj.AssertableApplicationContext;
@@ -106,6 +107,16 @@ class AgentscopePolarisSkillAutoConfigurationTest {
                         "agentscope.polaris.skill.mounted.enabled=true")
                 .withBean(PolarisContextManager.class, AgentscopePolarisSkillAutoConfigurationTest::stubContextManager)
                 .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    void firstNonBlankTreatsNullValuesAsEmpty() throws Exception {
+        Method method = AgentscopePolarisSkillAutoConfiguration.class
+                .getDeclaredMethod("firstNonBlank", String[].class);
+        method.setAccessible(true);
+        assertThat(method.invoke(null, new Object[] {null})).isEqualTo("");
+        assertThat(method.invoke(null, new Object[] {new String[] {null, "  ", " demo "}}))
+                .isEqualTo("demo");
     }
 
     @Test
