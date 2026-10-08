@@ -316,7 +316,7 @@ public class PolarisSkillRepository implements AgentSkillRepository {
                 if (log.isDebugEnabled()) {
                     log.debug("Cache miss for skill {}, downloading", key);
                 }
-                AgentSkill skill = getSkill(ref.name());
+                AgentSkill skill = loadSkill(ref.name(), ref.version());
                 skillCache.put(key, skill);
                 skills.add(skill);
             } catch (RuntimeException e) {

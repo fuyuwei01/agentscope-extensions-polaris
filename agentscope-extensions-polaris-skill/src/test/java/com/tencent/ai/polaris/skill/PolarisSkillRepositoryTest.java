@@ -236,7 +236,36 @@ class PolarisSkillRepositoryTest {
 
         repository.getAllSkills();
         verify(skillAPI, times(1)).listSkills(any());
-        verify(skillAPI, times(1)).downloadSkill(any());
+        ArgumentCaptor<SkillDownloadRequest> captor = ArgumentCaptor.forClass(SkillDownloadRequest.class);
+        verify(skillAPI, times(1)).downloadSkill(captor.capture());
+        assertEquals("1.0.0", captor.getValue().getVersion());
+    }
+
+    @Test
+    void getAllSkillsDownloadsEachListedActiveVersion() throws Exception {
+        SkillListResponse list = new SkillListResponse();
+        list.setCode(ServerCodes.EXECUTE_SUCCESS);
+        list.setResources(List.of(
+                listedSkill("sql-analysis", "1.0.0"),
+                listedSkill("chart-rendering", "2.3.0")));
+        list.setTotal(2);
+        when(skillAPI.listSkills(any())).thenReturn(list);
+        when(skillAPI.downloadSkill(any())).thenAnswer(inv -> {
+            SkillDownloadRequest req = inv.getArgument(0);
+            SkillDownloadResponse resp = new SkillDownloadResponse();
+            resp.setCode(ServerCodes.EXECUTE_SUCCESS);
+            resp.setZipContent(skillZip(req.getName(), "Desc", "Body", null, (String) null));
+            return resp;
+        });
+
+        assertEquals(2, repository.getAllSkills().size());
+
+        ArgumentCaptor<SkillDownloadRequest> captor = ArgumentCaptor.forClass(SkillDownloadRequest.class);
+        verify(skillAPI, times(2)).downloadSkill(captor.capture());
+        assertEquals("sql-analysis", captor.getAllValues().get(0).getName());
+        assertEquals("1.0.0", captor.getAllValues().get(0).getVersion());
+        assertEquals("chart-rendering", captor.getAllValues().get(1).getName());
+        assertEquals("2.3.0", captor.getAllValues().get(1).getVersion());
     }
 
     @Test
@@ -512,6 +541,15 @@ class PolarisSkillRepositoryTest {
         assertEquals(List.of(), repository.getAllSkills());
         assertEquals(List.of(), repository.getAllSkills());
         verify(skillAPI, times(1)).listSkills(any());
+    }
+
+    private static SkillResource listedSkill(String name, String activeVersion) {
+        SkillResource resource = new SkillResource();
+        resource.setName(name);
+        SkillVersionInfo versionInfo = new SkillVersionInfo();
+        versionInfo.setActiveVersion(activeVersion);
+        resource.setVersionInfo(versionInfo);
+        return resource;
     }
 
     private static byte[] skillZip(
