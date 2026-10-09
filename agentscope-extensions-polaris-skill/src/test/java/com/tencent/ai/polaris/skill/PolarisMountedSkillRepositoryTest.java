@@ -18,6 +18,7 @@ package com.tencent.ai.polaris.skill;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -246,6 +247,8 @@ class PolarisMountedSkillRepositoryTest {
         assertEquals("Analyze SQL", skill.getDescription());
         assertEquals("Run EXPLAIN", skill.getSkillContent());
         assertEquals("polaris-mounted:default/demo-agent", skill.getSource());
+        assertSame(skill, repository.getSkill("sql-analysis"));
+        verify(skillAPI, times(1)).downloadSkill(any());
 
         ArgumentCaptor<SkillDownloadRequest> captor = ArgumentCaptor.forClass(SkillDownloadRequest.class);
         verify(skillAPI).downloadSkill(captor.capture());
@@ -316,6 +319,19 @@ class PolarisMountedSkillRepositoryTest {
         assertEquals("sql-analysis", skills.get(0).getName());
         assertEquals("chart-rendering", skills.get(1).getName());
         verify(skillAPI, never()).listSkills(any());
+    }
+
+    @Test
+    void getAllSkillsAndGetSkillShareZipCache() throws Exception {
+        when(consumerAPI.getAllInstances(any())).thenReturn(serviceWithSkills("sql-analysis"));
+        when(skillAPI.downloadSkill(any()))
+                .thenReturn(successZip("sql-analysis", "Analyze SQL", "Run EXPLAIN"));
+
+        AgentSkill listed = repository.getAllSkills().get(0);
+        AgentSkill loaded = repository.getSkill("sql-analysis");
+
+        assertSame(listed, loaded);
+        verify(skillAPI, times(1)).downloadSkill(any());
     }
 
     @Test

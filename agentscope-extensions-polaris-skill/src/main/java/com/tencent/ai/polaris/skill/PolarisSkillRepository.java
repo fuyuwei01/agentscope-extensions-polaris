@@ -49,10 +49,10 @@ import java.util.zip.ZipOutputStream;
 /**
  * Read-only {@link AgentSkillRepository} backed by polaris-java {@link SkillAPI}.
  *
- * <p>{@link #getSkill(String)} downloads a skill zip, wraps flat Polaris packages under
- * {@code name/} when needed, then builds an {@link AgentSkill} via
- * {@link SkillUtil#createFromZip(byte[], String)}. {@link #getAllSkills()} lists published
- * skills (or a configured name set) and caches {@link AgentSkill} by {@code name#version}.
+ * <p>{@link #getSkill(String)} and {@link #getAllSkills()} download a skill zip, wrap flat
+ * Polaris packages under {@code name/} when needed, then build an {@link AgentSkill} via
+ * {@link SkillUtil#createFromZip(byte[], String)}. Built skills are cached by
+ * {@code name#version}, so a later read of the same name and version does not download again.
  * Writes are no-ops. {@link #close()} does not destroy {@link SkillAPI} because it shares
  * {@code SDKContext} with {@link PolarisContextManager}.
  */
@@ -212,11 +212,22 @@ public class PolarisSkillRepository implements AgentSkillRepository {
     /**
      * Downloads a skill at an explicit version and builds an {@link AgentSkill} from its zip.
      *
+     * <p>Successful loads are cached by {@code name#version}. A blank version is its own key
+     * (server-active) and is not reused for a later explicit version. Failures are not cached.
+     *
      * @param name the skill name (must already be trimmed and non-blank)
      * @param skillVersion skill version; blank means the server-active version
      * @return the downloaded skill
      */
     protected AgentSkill loadSkill(String name, String skillVersion) {
+        String key = cacheKey(name, skillVersion);
+        AgentSkill cached = skillCache.get(key);
+        if (cached != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Using cached skill {}", key);
+            }
+            return cached;
+        }
         if (log.isDebugEnabled()) {
             log.debug("Downloading skill {} namespace={} version={}",
                     name, namespace, skillVersion);
@@ -236,8 +247,10 @@ public class PolarisSkillRepository implements AgentSkillRepository {
                 log.debug("Downloaded skill {} namespace={} zipBytes={} code={}",
                         name, namespace, resp.getZipContent().length, resp.getCode());
             }
-            return SkillUtil.createFromZip(
+            AgentSkill skill = SkillUtil.createFromZip(
                     adaptZipForSkillUtil(resp.getZipContent(), name), getSource());
+            AgentSkill existing = skillCache.putIfAbsent(key, skill);
+            return existing != null ? existing : skill;
         } catch (PolarisException e) {
             throw new RuntimeException("Failed to load skill from Polaris: " + name, e);
         }
@@ -303,22 +316,8 @@ public class PolarisSkillRepository implements AgentSkillRepository {
         }
         List<AgentSkill> skills = new ArrayList<>();
         for (SkillRef ref : lastRefs) {
-            String key = cacheKey(ref);
-            AgentSkill cached = skillCache.get(key);
-            if (cached != null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Using cached skill {}", key);
-                }
-                skills.add(cached);
-                continue;
-            }
             try {
-                if (log.isDebugEnabled()) {
-                    log.debug("Cache miss for skill {}, downloading", key);
-                }
-                AgentSkill skill = loadSkill(ref.name(), ref.version());
-                skillCache.put(key, skill);
-                skills.add(skill);
+                skills.add(loadSkill(ref.name(), ref.version()));
             } catch (RuntimeException e) {
                 log.warn("Failed to load skill {} from Polaris, skipping: {}", ref.name(), e.getMessage());
             }
@@ -453,12 +452,8 @@ public class PolarisSkillRepository implements AgentSkillRepository {
         return new SkillRef(resource.getName(), resolved);
     }
 
-    private static String cacheKey(SkillRef ref) {
-        String resolved = ref.version();
-        if (resolved == null) {
-            resolved = "";
-        }
-        return ref.name() + "#" + resolved;
+    private static String cacheKey(String name, String skillVersion) {
+        return name + "#" + (skillVersion == null ? "" : skillVersion);
     }
 
     private static boolean isListFailure(SkillListResponse resp) {

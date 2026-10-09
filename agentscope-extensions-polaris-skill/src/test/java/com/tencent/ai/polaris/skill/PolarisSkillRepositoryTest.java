@@ -18,6 +18,7 @@ package com.tencent.ai.polaris.skill;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -194,6 +195,71 @@ class PolarisSkillRepositoryTest {
         ArgumentCaptor<SkillDownloadRequest> captor = ArgumentCaptor.forClass(SkillDownloadRequest.class);
         verify(skillAPI).downloadSkill(captor.capture());
         assertEquals("1.0.0", captor.getValue().getVersion());
+    }
+
+    @Test
+    void getSkillReusesZipCacheForSameVersion() throws Exception {
+        repository = new PolarisSkillRepository(skillAPI, "default", "1.0.0");
+        SkillDownloadResponse resp = new SkillDownloadResponse();
+        resp.setCode(ServerCodes.EXECUTE_SUCCESS);
+        resp.setZipContent(skillZip("sql-analysis", "Analyze SQL", "Run EXPLAIN", null, (String) null));
+        when(skillAPI.downloadSkill(any())).thenReturn(resp);
+
+        AgentSkill first = repository.getSkill("sql-analysis");
+        AgentSkill second = repository.getSkill("sql-analysis");
+
+        assertSame(first, second);
+        verify(skillAPI, times(1)).downloadSkill(any());
+    }
+
+    @Test
+    void getSkillAndGetAllSkillsShareZipCache() throws Exception {
+        repository = new PolarisSkillRepository(
+                skillAPI, "default", "1.0.0", List.of("sql-analysis"), 50, 100, 0L);
+        SkillDownloadResponse resp = new SkillDownloadResponse();
+        resp.setCode(ServerCodes.EXECUTE_SUCCESS);
+        resp.setZipContent(skillZip("sql-analysis", "Analyze SQL", "Run EXPLAIN", null, (String) null));
+        when(skillAPI.downloadSkill(any())).thenReturn(resp);
+
+        AgentSkill loaded = repository.getSkill("sql-analysis");
+        List<AgentSkill> skills = repository.getAllSkills();
+
+        assertEquals(1, skills.size());
+        assertSame(loaded, skills.get(0));
+        verify(skillAPI, times(1)).downloadSkill(any());
+    }
+
+    @Test
+    void loadSkillDownloadsAgainWhenVersionChanges() throws Exception {
+        SkillDownloadResponse resp = new SkillDownloadResponse();
+        resp.setCode(ServerCodes.EXECUTE_SUCCESS);
+        resp.setZipContent(skillZip("sql-analysis", "Analyze SQL", "Run EXPLAIN", null, (String) null));
+        when(skillAPI.downloadSkill(any())).thenReturn(resp);
+
+        repository.loadSkill("sql-analysis", "1.0.0");
+        repository.loadSkill("sql-analysis", "1.0.0");
+        repository.loadSkill("sql-analysis", "2.0.0");
+
+        ArgumentCaptor<SkillDownloadRequest> captor = ArgumentCaptor.forClass(SkillDownloadRequest.class);
+        verify(skillAPI, times(2)).downloadSkill(captor.capture());
+        assertEquals("1.0.0", captor.getAllValues().get(0).getVersion());
+        assertEquals("2.0.0", captor.getAllValues().get(1).getVersion());
+    }
+
+    @Test
+    void getSkillRetriesAfterDownloadFailure() throws Exception {
+        SkillDownloadResponse resp = new SkillDownloadResponse();
+        resp.setCode(ServerCodes.EXECUTE_SUCCESS);
+        resp.setZipContent(skillZip("sql-analysis", "Analyze SQL", "Run EXPLAIN", null, (String) null));
+        when(skillAPI.downloadSkill(any()))
+                .thenThrow(new PolarisException(ErrorCode.NETWORK_ERROR, "down"))
+                .thenReturn(resp);
+
+        assertThrows(RuntimeException.class, () -> repository.getSkill("sql-analysis"));
+        AgentSkill skill = repository.getSkill("sql-analysis");
+
+        assertEquals("sql-analysis", skill.getName());
+        verify(skillAPI, times(2)).downloadSkill(any());
     }
 
     @Test
