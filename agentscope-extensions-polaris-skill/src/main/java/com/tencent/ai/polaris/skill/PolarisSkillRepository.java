@@ -234,14 +234,24 @@ public class PolarisSkillRepository implements AgentSkillRepository {
         }
         try {
             SkillDownloadResponse resp = downloadZip(name, skillVersion);
-            if (isNotFound(resp) || resp.getZipContent() == null || resp.getZipContent().length == 0) {
+            if (resp == null) {
+                throw new RuntimeException("Failed to load skill from Polaris: " + name);
+            }
+            if (isNotFound(resp)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Skill {} not found in namespace {} (code={}, zipBytes={})",
-                            name, namespace,
-                            resp == null ? -1 : resp.getCode(),
-                            resp == null || resp.getZipContent() == null ? 0 : resp.getZipContent().length);
+                    log.debug("Skill {} not found in namespace {} (code={})",
+                            name, namespace, resp.getCode());
                 }
                 throw new IllegalArgumentException("Skill not found: " + name);
+            }
+            if (!isSuccess(resp.getCode())) {
+                String info = resp.getInfo() == null ? "" : resp.getInfo();
+                throw new RuntimeException("Failed to load skill from Polaris: " + name
+                        + " (code=" + resp.getCode() + (info.isEmpty() ? "" : ", info=" + info) + ")");
+            }
+            if (resp.getZipContent() == null || resp.getZipContent().length == 0) {
+                throw new RuntimeException(
+                        "Failed to load skill from Polaris: " + name + " (empty zip)");
             }
             if (log.isDebugEnabled()) {
                 log.debug("Downloaded skill {} namespace={} zipBytes={} code={}",
@@ -457,8 +467,11 @@ public class PolarisSkillRepository implements AgentSkillRepository {
     }
 
     private static boolean isListFailure(SkillListResponse resp) {
-        int code = resp.getCode();
-        return code != 0 && code != ServerCodes.EXECUTE_SUCCESS;
+        return !isSuccess(resp.getCode());
+    }
+
+    private static boolean isSuccess(int code) {
+        return code == 0 || code == ServerCodes.EXECUTE_SUCCESS;
     }
 
     private SkillDownloadResponse downloadZip(String name, String skillVersion) throws PolarisException {

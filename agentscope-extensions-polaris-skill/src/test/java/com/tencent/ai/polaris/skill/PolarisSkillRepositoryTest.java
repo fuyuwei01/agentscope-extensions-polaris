@@ -114,6 +114,32 @@ class PolarisSkillRepositoryTest {
     }
 
     @Test
+    void getSkillRejectsNullDownloadResponse() throws Exception {
+        when(skillAPI.downloadSkill(any())).thenReturn(null);
+
+        RuntimeException e =
+                assertThrows(RuntimeException.class, () -> repository.getSkill("sql-analysis"));
+        assertFalse(e instanceof IllegalArgumentException);
+        assertEquals("Failed to load skill from Polaris: sql-analysis", e.getMessage());
+    }
+
+    @Test
+    void getSkillMapsErrorCodeInsteadOfNotFound() throws Exception {
+        SkillDownloadResponse resp = new SkillDownloadResponse();
+        resp.setCode(401000);
+        resp.setInfo("unauthorized");
+        when(skillAPI.downloadSkill(any())).thenReturn(resp);
+
+        RuntimeException e =
+                assertThrows(RuntimeException.class, () -> repository.getSkill("sql-analysis"));
+        assertFalse(e instanceof IllegalArgumentException);
+        assertEquals(
+                "Failed to load skill from Polaris: sql-analysis (code=401000, info=unauthorized)",
+                e.getMessage());
+        assertFalse(repository.skillExists("sql-analysis"));
+    }
+
+    @Test
     void getSkillMapsNetworkError() throws Exception {
         when(skillAPI.downloadSkill(any()))
                 .thenThrow(new PolarisException(ErrorCode.NETWORK_ERROR, "down"));
@@ -426,15 +452,16 @@ class PolarisSkillRepositoryTest {
     }
 
     @Test
-    void getSkillTreatsEmptyZipAsNotFound() throws Exception {
+    void getSkillRejectsEmptyZip() throws Exception {
         SkillDownloadResponse resp = new SkillDownloadResponse();
         resp.setCode(ServerCodes.EXECUTE_SUCCESS);
         resp.setZipContent(new byte[0]);
         when(skillAPI.downloadSkill(any())).thenReturn(resp);
 
-        IllegalArgumentException e =
-                assertThrows(IllegalArgumentException.class, () -> repository.getSkill("missing"));
-        assertEquals("Skill not found: missing", e.getMessage());
+        RuntimeException e =
+                assertThrows(RuntimeException.class, () -> repository.getSkill("sql-analysis"));
+        assertFalse(e instanceof IllegalArgumentException);
+        assertEquals("Failed to load skill from Polaris: sql-analysis (empty zip)", e.getMessage());
     }
 
     @Test
