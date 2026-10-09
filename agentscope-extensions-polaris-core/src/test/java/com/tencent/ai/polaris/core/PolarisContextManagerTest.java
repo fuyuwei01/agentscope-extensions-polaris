@@ -16,6 +16,7 @@
 
 package com.tencent.ai.polaris.core;
 
+import com.tencent.polaris.ai.api.core.SkillAPI;
 import com.tencent.polaris.api.core.ConsumerAPI;
 import com.tencent.polaris.api.core.ProviderAPI;
 import com.tencent.polaris.client.api.SDKContext;
@@ -63,21 +64,26 @@ class PolarisContextManagerTest {
     void closeResources_closesAllResourcesAndSuppressesLaterFailures() {
         ProviderAPI providerAPI = mock(ProviderAPI.class);
         ConsumerAPI consumerAPI = mock(ConsumerAPI.class);
+        SkillAPI skillAPI = mock(SkillAPI.class);
         SDKContext sdkContext = mock(SDKContext.class);
         RuntimeException providerFailure = new RuntimeException("provider close failed");
         RuntimeException consumerFailure = new RuntimeException("consumer close failed");
+        RuntimeException skillFailure = new RuntimeException("skill close failed");
         doThrow(providerFailure).when(providerAPI).close();
         doThrow(consumerFailure).when(consumerAPI).close();
+        doThrow(skillFailure).when(skillAPI).close();
 
         RuntimeException thrown = assertThrows(RuntimeException.class,
-                () -> PolarisContextManager.closeResources(providerAPI, consumerAPI, sdkContext));
+                () -> PolarisContextManager.closeResources(providerAPI, consumerAPI, skillAPI, sdkContext));
 
         assertSame(providerFailure, thrown);
-        assertEquals(1, thrown.getSuppressed().length);
+        assertEquals(2, thrown.getSuppressed().length);
         assertSame(consumerFailure, thrown.getSuppressed()[0]);
-        InOrder closeOrder = inOrder(providerAPI, consumerAPI, sdkContext);
+        assertSame(skillFailure, thrown.getSuppressed()[1]);
+        InOrder closeOrder = inOrder(providerAPI, consumerAPI, skillAPI, sdkContext);
         closeOrder.verify(providerAPI).close();
         closeOrder.verify(consumerAPI).close();
+        closeOrder.verify(skillAPI).close();
         closeOrder.verify(sdkContext).close();
     }
 
@@ -86,7 +92,7 @@ class PolarisContextManagerTest {
         ConsumerAPI consumerAPI = mock(ConsumerAPI.class);
         SDKContext sdkContext = mock(SDKContext.class);
 
-        PolarisContextManager.closeResources(null, consumerAPI, sdkContext);
+        PolarisContextManager.closeResources(null, consumerAPI, null, sdkContext);
 
         InOrder closeOrder = inOrder(consumerAPI, sdkContext);
         closeOrder.verify(consumerAPI).close();

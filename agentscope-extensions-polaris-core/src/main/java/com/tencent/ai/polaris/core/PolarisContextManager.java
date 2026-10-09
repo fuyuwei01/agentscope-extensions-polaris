@@ -110,7 +110,7 @@ public class PolarisContextManager implements AutoCloseable {
             log.debug("Polaris SDK context initialization failed, closing partial resources: {}",
                     e.getMessage());
             throw closeResourcesAndCollect(
-                    initializedProviderAPI, initializedConsumerAPI, initializedContext, e);
+                    initializedProviderAPI, initializedConsumerAPI, initializedSkillAPI, initializedContext, e);
         }
         this.sdkContext = initializedContext;
         this.providerAPI = initializedProviderAPI;
@@ -226,11 +226,13 @@ public class PolarisContextManager implements AutoCloseable {
 
     @Override
     public void close() {
-        closeResources(providerAPI, consumerAPI, sdkContext);
+        closeResources(providerAPI, consumerAPI, skillAPI, sdkContext);
     }
 
-    static void closeResources(ProviderAPI providerAPI, ConsumerAPI consumerAPI, SDKContext sdkContext) {
-        RuntimeException failure = closeResourcesAndCollect(providerAPI, consumerAPI, sdkContext, null);
+    static void closeResources(
+            ProviderAPI providerAPI, ConsumerAPI consumerAPI, SkillAPI skillAPI, SDKContext sdkContext) {
+        RuntimeException failure = closeResourcesAndCollect(
+                providerAPI, consumerAPI, skillAPI, sdkContext, null);
         if (failure != null) {
             throw failure;
         }
@@ -239,6 +241,7 @@ public class PolarisContextManager implements AutoCloseable {
     private static RuntimeException closeResourcesAndCollect(
             ProviderAPI providerAPI,
             ConsumerAPI consumerAPI,
+            SkillAPI skillAPI,
             SDKContext sdkContext,
             RuntimeException failure) {
         if (providerAPI != null) {
@@ -251,6 +254,13 @@ public class PolarisContextManager implements AutoCloseable {
         if (consumerAPI != null) {
             try {
                 consumerAPI.close();
+            } catch (RuntimeException e) {
+                failure = addFailure(failure, e);
+            }
+        }
+        if (skillAPI != null) {
+            try {
+                skillAPI.close();
             } catch (RuntimeException e) {
                 failure = addFailure(failure, e);
             }
