@@ -52,8 +52,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * <ul>
  *   <li>{@link PolarisA2aConstants#META_AGENT_CARD} — full AgentCard JSON</li>
  *   <li>{@link PolarisA2aConstants#META_AGENT_NAME} — agent name</li>
- *   <li>{@link PolarisA2aConstants#META_TRANSPORT} / {@link PolarisA2aConstants#META_PATH} —
- *       locator fields for this endpoint</li>
  * </ul>
  * A single metadata value must be at most {@link PolarisA2aConstants#MAX_METADATA_VALUE_CHARS}
  * characters (64KiB − 1). Oversized values throw {@link IllegalArgumentException}
@@ -117,7 +115,7 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
     /**
      * Register one Polaris instance per transport. Partial success is rolled back.
      *
-     * @param agentCard identity and JSON payload stored under {@code a2a.agent.card}
+     * @param agentCard identity and JSON payload stored under {@code ai-agent-card}
      * @param transports non-empty list; each entry needs a non-null port
      * @throws IllegalArgumentException if transports are empty, a port is missing, or
      *         any metadata value exceeds {@link PolarisA2aConstants#MAX_METADATA_VALUE_CHARS}
@@ -151,7 +149,7 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
                 if (serviceToken != null) {
                     req.setToken(serviceToken);
                 }
-                Map<String, String> meta = buildMetadata(cardJson, tp);
+                Map<String, String> meta = buildMetadata(cardJson);
                 meta.put(META_AGENT_NAME, agentCard.name());
                 assertMetadataWithinLimit(service, meta);
                 req.setMetadata(meta);
@@ -180,18 +178,12 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
     }
 
     /**
-     * Locator + card metadata for one transport. {@link PolarisA2aConstants#META_AGENT_NAME}
+     * Card metadata for an instance. {@link PolarisA2aConstants#META_AGENT_NAME}
      * is added by the caller after this map is built.
      */
-    static Map<String, String> buildMetadata(String cardJson, TransportProperties tp) {
+    static Map<String, String> buildMetadata(String cardJson) {
         Map<String, String> meta = new HashMap<>();
         meta.put(PolarisA2aConstants.META_AGENT_CARD, cardJson);
-        if (tp.transportType() != null) {
-            meta.put(PolarisA2aConstants.META_TRANSPORT, tp.transportType());
-        }
-        if (tp.path() != null) {
-            meta.put(PolarisA2aConstants.META_PATH, tp.path());
-        }
         return meta;
     }
 

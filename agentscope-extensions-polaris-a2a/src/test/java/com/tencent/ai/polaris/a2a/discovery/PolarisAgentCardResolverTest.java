@@ -92,7 +92,7 @@ class PolarisAgentCardResolverTest {
     @Test
     void getAgentCard_resolvesFromHealthyInstanceMetadata() throws PolarisException {
         String cardJson = AgentCardCodec.toJson(buildCard("weather-agent"));
-        Instance healthy = buildInstance("10.0.0.1", 8080, Map.of("a2a.agent.card", cardJson));
+        Instance healthy = buildInstance("10.0.0.1", 8080, Map.of("ai-agent-card", cardJson));
         doReturn(responseWith(healthy)).when(consumerAPI).getHealthyInstances(any(GetHealthyInstancesRequest.class));
 
         AgentCard resolved = resolver().getAgentCard("weather-agent");
@@ -106,8 +106,8 @@ class PolarisAgentCardResolverTest {
     void getAgentCard_sticksToFirstInstanceEvenIfAnotherAppearsFirst() throws PolarisException {
         String firstJson = AgentCardCodec.toJson(buildCard("sticky", "1.0.0", "http://10.0.0.1:8080/"));
         String secondJson = AgentCardCodec.toJson(buildCard("sticky", "2.0.0", "http://10.0.0.2:8080/"));
-        Instance first = buildInstance("10.0.0.1", 8080, Map.of("a2a.agent.card", firstJson));
-        Instance second = buildInstance("10.0.0.2", 8080, Map.of("a2a.agent.card", secondJson));
+        Instance first = buildInstance("10.0.0.1", 8080, Map.of("ai-agent-card", firstJson));
+        Instance second = buildInstance("10.0.0.2", 8080, Map.of("ai-agent-card", secondJson));
         InstancesResponse firstResponse = responseWith(first, second);
         InstancesResponse reversedResponse = responseWith(second, first);
         when(consumerAPI.getHealthyInstances(any(GetHealthyInstancesRequest.class)))
@@ -129,9 +129,9 @@ class PolarisAgentCardResolverTest {
         String v1 = AgentCardCodec.toJson(buildCard("sticky", "1.0.0", "http://10.0.0.1:8080/"));
         String v2 = AgentCardCodec.toJson(buildCard("sticky", "1.1.0", "http://10.0.0.1:8080/"));
         String other = AgentCardCodec.toJson(buildCard("sticky", "9.0.0", "http://10.0.0.2:8080/"));
-        Instance firstV1 = buildInstance("10.0.0.1", 8080, Map.of("a2a.agent.card", v1));
-        Instance firstV2 = buildInstance("10.0.0.1", 8080, Map.of("a2a.agent.card", v2));
-        Instance second = buildInstance("10.0.0.2", 8080, Map.of("a2a.agent.card", other));
+        Instance firstV1 = buildInstance("10.0.0.1", 8080, Map.of("ai-agent-card", v1));
+        Instance firstV2 = buildInstance("10.0.0.1", 8080, Map.of("ai-agent-card", v2));
+        Instance second = buildInstance("10.0.0.2", 8080, Map.of("ai-agent-card", other));
         InstancesResponse initial = responseWith(firstV1, second);
         InstancesResponse updated = responseWith(second, firstV2);
         when(consumerAPI.getHealthyInstances(any(GetHealthyInstancesRequest.class)))
@@ -151,8 +151,8 @@ class PolarisAgentCardResolverTest {
     void getAgentCard_switchesWhenStickyInstanceLeavesHealthyList() throws PolarisException {
         String firstJson = AgentCardCodec.toJson(buildCard("failover", "1.0.0", "http://10.0.0.1:8080/"));
         String secondJson = AgentCardCodec.toJson(buildCard("failover", "2.0.0", "http://10.0.0.2:8080/"));
-        Instance first = buildInstance("10.0.0.1", 8080, Map.of("a2a.agent.card", firstJson));
-        Instance second = buildInstance("10.0.0.2", 8080, Map.of("a2a.agent.card", secondJson));
+        Instance first = buildInstance("10.0.0.1", 8080, Map.of("ai-agent-card", firstJson));
+        Instance second = buildInstance("10.0.0.2", 8080, Map.of("ai-agent-card", secondJson));
         InstancesResponse both = responseWith(first, second);
         InstancesResponse onlySecond = responseWith(second);
         when(consumerAPI.getHealthyInstances(any(GetHealthyInstancesRequest.class)))
@@ -169,7 +169,7 @@ class PolarisAgentCardResolverTest {
     @Test
     void getAgentCard_polarisFailureAfterCache_keepsStickyCard() throws PolarisException {
         String firstJson = AgentCardCodec.toJson(buildCard("sticky", "1.0.0", "http://10.0.0.1:8080/"));
-        Instance first = buildInstance("10.0.0.1", 8080, Map.of("a2a.agent.card", firstJson));
+        Instance first = buildInstance("10.0.0.1", 8080, Map.of("ai-agent-card", firstJson));
         InstancesResponse firstResponse = responseWith(first);
         when(consumerAPI.getHealthyInstances(any(GetHealthyInstancesRequest.class)))
                 .thenReturn(firstResponse)
@@ -183,8 +183,8 @@ class PolarisAgentCardResolverTest {
     @Test
     void getAgentCard_skipsMalformedCardAndUsesNext() throws PolarisException {
         String validJson = AgentCardCodec.toJson(buildCard("healthy"));
-        Instance malformed = buildInstance("10.0.0.1", 8080, Map.of("a2a.agent.card", "{not-json"));
-        Instance valid = buildInstance("10.0.0.2", 8080, Map.of("a2a.agent.card", validJson));
+        Instance malformed = buildInstance("10.0.0.1", 8080, Map.of("ai-agent-card", "{not-json"));
+        Instance valid = buildInstance("10.0.0.2", 8080, Map.of("ai-agent-card", validJson));
         doReturn(responseWith(malformed, valid))
                 .when(consumerAPI).getHealthyInstances(any(GetHealthyInstancesRequest.class));
 
@@ -194,7 +194,7 @@ class PolarisAgentCardResolverTest {
     @Test
     void getAgentCard_skipsCardWithDifferentName() throws PolarisException {
         String wrongJson = AgentCardCodec.toJson(buildCard("other"));
-        Instance wrong = buildInstance("10.0.0.1", 8080, Map.of("a2a.agent.card", wrongJson));
+        Instance wrong = buildInstance("10.0.0.1", 8080, Map.of("ai-agent-card", wrongJson));
         doReturn(responseWith(wrong)).when(consumerAPI).getHealthyInstances(any(GetHealthyInstancesRequest.class));
 
         assertThrows(AgentCardNotFoundException.class, () -> resolver().getAgentCard("requested"));

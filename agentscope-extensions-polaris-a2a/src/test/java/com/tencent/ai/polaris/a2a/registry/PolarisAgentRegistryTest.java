@@ -16,6 +16,7 @@
 
 package com.tencent.ai.polaris.a2a.registry;
 
+import com.tencent.ai.polaris.a2a.util.AgentCardCodec;
 import io.a2a.spec.AgentCapabilities;
 import io.a2a.spec.AgentCard;
 import io.agentscope.core.a2a.server.transport.TransportProperties;
@@ -33,9 +34,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -87,7 +88,7 @@ class PolarisAgentRegistryTest {
     }
 
     @Test
-    void register_putsFullAgentCardJsonAndServiceTokenInMetadata() throws PolarisException {
+    void register_putsOnlyAgentCardAndNameInMetadataAndSetsServiceToken() throws PolarisException {
         when(providerAPI.registerInstance(any(InstanceRegisterRequest.class)))
                 .thenReturn(new InstanceRegisterResponse("inst-1", false));
 
@@ -112,18 +113,14 @@ class PolarisAgentRegistryTest {
         assertTrue(first.isAutoHeartbeat());
         assertEquals(5, first.getTtl());
         assertEquals("svc-token", first.getToken());
-        assertNotNull(first.getMetadata().get("a2a.agent.card"));
-        assertTrue(first.getMetadata().get("a2a.agent.card").contains("\"name\":\"weather-agent\"")
-                || first.getMetadata().get("a2a.agent.card").contains("weather-agent"));
-        assertEquals("JSONRPC", first.getMetadata().get("a2a.transport"));
-        assertEquals("/", first.getMetadata().get("a2a.path"));
-        assertEquals("weather-agent", first.getMetadata().get("ai-agent-name"));
+        assertEquals(Map.of(
+                "ai-agent-card", AgentCardCodec.toJson(card),
+                "ai-agent-name", "weather-agent"), first.getMetadata());
 
         InstanceRegisterRequest second = requests.get(1);
         assertEquals(8443, second.getPort());
         assertEquals("https", second.getProtocol());
-        assertEquals("HTTP+JSON", second.getMetadata().get("a2a.transport"));
-        assertNotNull(second.getMetadata().get("a2a.agent.card"));
+        assertEquals(first.getMetadata(), second.getMetadata());
 
         assertEquals(2, registry.getRegistered().size());
         assertEquals("inst-1", registry.getRegistered().get(0).instanceId());

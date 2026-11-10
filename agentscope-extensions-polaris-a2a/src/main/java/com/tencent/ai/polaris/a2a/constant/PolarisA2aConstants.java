@@ -31,13 +31,7 @@ public final class PolarisA2aConstants {
     public static final String META_AGENT_NAME = "ai-agent-name";
 
     /** Holds the full serialized {@link io.a2a.spec.AgentCard} JSON. */
-    public static final String META_AGENT_CARD = "a2a.agent.card";
-
-    /** Transport type of this instance endpoint (e.g. JSONRPC, HTTP+JSON). */
-    public static final String META_TRANSPORT = "a2a.transport";
-
-    /** URL path of this instance endpoint. */
-    public static final String META_PATH = "a2a.path";
+    public static final String META_AGENT_CARD = "ai-agent-card";
 
     /** Registry name reported to AgentScope. */
     public static final String REGISTRY_NAME = "Polaris";

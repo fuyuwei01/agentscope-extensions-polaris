@@ -52,7 +52,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * usable), another instance is chosen, an info log is written, and the new identity is
  * cached. Polaris SDK errors after a successful pick keep the cached card (warn log).
  *
- * <p>Candidates are skipped when they are missing {@code a2a.agent.card}, fail JSON
+ * <p>Candidates are skipped when they are missing {@code ai-agent-card}, fail JSON
  * decode, or carry a card whose {@code name} does not match the requested agent.
  * When picking (first time or failover) the first remaining instance in the healthy
  * list wins.
