@@ -36,6 +36,9 @@ public final class PolarisA2aConstants {
     /** Registry name reported to AgentScope. */
     public static final String REGISTRY_NAME = "Polaris";
 
+    /** Default Polaris registration port, independent of the A2A transport endpoint. */
+    public static final int DEFAULT_REGISTRATION_PORT = 0;
+
     /** Default heartbeat ttl (seconds) used by {@code registerInstance}. */
     public static final int DEFAULT_TTL_SECONDS = 5;
 

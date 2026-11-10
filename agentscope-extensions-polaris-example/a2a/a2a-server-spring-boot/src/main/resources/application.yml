@@ -71,5 +71,6 @@ agentscope:
       registry:
         enabled: true
         ttl: 5
+        port: ${POLARIS_REGISTRY_PORT:0}
       discovery:
         enabled: true

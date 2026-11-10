@@ -17,6 +17,7 @@
 package com.tencent.ai.polaris.a2a.registry;
 
 import com.tencent.ai.polaris.a2a.util.AgentCardCodec;
+import com.tencent.ai.polaris.core.PolarisContextManager;
 import io.a2a.spec.AgentCapabilities;
 import io.a2a.spec.AgentCard;
 import io.agentscope.core.a2a.server.transport.TransportProperties;
@@ -41,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -96,7 +98,7 @@ class PolarisAgentRegistryTest {
         AgentCard card = buildCard("weather-agent", "1.0.0");
         List<TransportProperties> transports = List.of(
                 buildTransport("JSONRPC", "10.0.0.1", 8080, false),
-                buildTransport("HTTP+JSON", "10.0.0.1", 8443, true));
+                buildTransport("HTTP+JSON", "10.0.0.2", 8443, true));
 
         registry.register(card, transports);
 
@@ -107,9 +109,9 @@ class PolarisAgentRegistryTest {
         assertEquals(NAMESPACE, first.getNamespace());
         assertEquals("weather-agent", first.getService());
         assertEquals("10.0.0.1", first.getHost());
-        assertEquals(8080, first.getPort());
+        assertEquals(0, first.getPort());
         assertEquals("1.0.0", first.getVersion());
-        assertEquals("http", first.getProtocol());
+        assertEquals("", first.getProtocol());
         assertTrue(first.isAutoHeartbeat());
         assertEquals(5, first.getTtl());
         assertEquals("svc-token", first.getToken());
@@ -118,12 +120,82 @@ class PolarisAgentRegistryTest {
                 "ai-agent-name", "weather-agent"), first.getMetadata());
 
         InstanceRegisterRequest second = requests.get(1);
-        assertEquals(8443, second.getPort());
-        assertEquals("https", second.getProtocol());
+        assertEquals("10.0.0.2", second.getHost());
+        assertEquals(0, second.getPort());
+        assertEquals("", second.getProtocol());
         assertEquals(first.getMetadata(), second.getMetadata());
 
         assertEquals(2, registry.getRegistered().size());
         assertEquals("inst-1", registry.getRegistered().get(0).instanceId());
+    }
+
+    @Test
+    void register_transportsOnSameHost_registersAndDeregistersOnce() throws PolarisException {
+        when(providerAPI.registerInstance(any(InstanceRegisterRequest.class)))
+                .thenReturn(new InstanceRegisterResponse("inst-1", false));
+        PolarisAgentRegistry registry = new PolarisAgentRegistry(providerAPI, NAMESPACE, 5);
+
+        registry.register(buildCard("echo", "1.0.0"), List.of(
+                buildTransport("JSONRPC", "h", 8080, false),
+                buildTransport("HTTP+JSON", "h", 8443, true)));
+
+        verify(providerAPI).registerInstance(registerCaptor.capture());
+        assertEquals(0, registerCaptor.getValue().getPort());
+        assertEquals(1, registry.getRegistered().size());
+
+        registry.close();
+
+        verify(providerAPI).deRegister(deregisterCaptor.capture());
+        assertEquals(0, deregisterCaptor.getValue().getPort());
+        assertTrue(registry.getRegistered().isEmpty());
+    }
+
+    @Test
+    void register_builderPortOverridesTransportPortAndIsUsedForDeregistration() throws PolarisException {
+        when(providerAPI.registerInstance(any(InstanceRegisterRequest.class)))
+                .thenReturn(new InstanceRegisterResponse("inst-custom", false));
+        PolarisContextManager context = mock(PolarisContextManager.class);
+        when(context.providerAPI()).thenReturn(providerAPI);
+        when(context.getNamespace()).thenReturn(NAMESPACE);
+        PolarisAgentRegistry registry = PolarisAgentRegistry.builder(context).port(18080).build();
+        AgentCard card = buildCard("echo", "1.0.0");
+
+        registry.register(card, List.of(buildTransport("JSONRPC", "h", 8080, false)));
+
+        verify(providerAPI).registerInstance(registerCaptor.capture());
+        InstanceRegisterRequest request = registerCaptor.getValue();
+        assertEquals(18080, request.getPort());
+        assertEquals("", request.getProtocol());
+        assertEquals(card.url(), AgentCardCodec.fromJson(request.getMetadata().get("ai-agent-card")).url());
+        assertEquals(18080, registry.getRegistered().get(0).port());
+
+        registry.close();
+
+        verify(providerAPI).deRegister(deregisterCaptor.capture());
+        assertEquals(18080, deregisterCaptor.getValue().getPort());
+        assertEquals("inst-custom", deregisterCaptor.getValue().getInstanceID());
+    }
+
+    @Test
+    void register_missingTransportPort_usesDefaultRegistrationPort() throws PolarisException {
+        when(providerAPI.registerInstance(any(InstanceRegisterRequest.class)))
+                .thenReturn(new InstanceRegisterResponse("inst-1", false));
+        PolarisAgentRegistry registry = new PolarisAgentRegistry(providerAPI, NAMESPACE, 5);
+        TransportProperties transport = TransportProperties.builder("JSONRPC").host("h").build();
+
+        registry.register(buildCard("echo", "1.0.0"), List.of(transport));
+
+        verify(providerAPI).registerInstance(registerCaptor.capture());
+        assertEquals(0, registerCaptor.getValue().getPort());
+    }
+
+    @Test
+    void constructor_invalidRegistrationPort_throwsBeforeRegistration() throws PolarisException {
+        for (int invalidPort : new int[]{-1, 65_536}) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new PolarisAgentRegistry(providerAPI, NAMESPACE, 5, null, invalidPort));
+        }
+        verify(providerAPI, never()).registerInstance(any());
     }
 
     @Test
@@ -160,17 +232,18 @@ class PolarisAgentRegistryTest {
         when(providerAPI.registerInstance(any(InstanceRegisterRequest.class)))
                 .thenReturn(new InstanceRegisterResponse("inst-first", false))
                 .thenThrow(new PolarisException(ErrorCode.API_INVALID_ARGUMENT, "second failed"));
-        PolarisAgentRegistry registry = new PolarisAgentRegistry(providerAPI, NAMESPACE, 5, "tok");
+        PolarisAgentRegistry registry = new PolarisAgentRegistry(providerAPI, NAMESPACE, 5, "tok", 18080);
 
         assertThrows(IllegalStateException.class, () -> registry.register(
                 buildCard("echo", "2.0"),
                 List.of(
                         buildTransport("JSONRPC", "h", 9000, false),
-                        buildTransport("HTTP+JSON", "h", 9001, false))));
+                        buildTransport("HTTP+JSON", "other", 9001, false))));
 
         verify(providerAPI).deRegister(deregisterCaptor.capture());
         assertEquals("inst-first", deregisterCaptor.getValue().getInstanceID());
         assertEquals("tok", deregisterCaptor.getValue().getToken());
+        assertEquals(18080, deregisterCaptor.getValue().getPort());
         assertTrue(registry.getRegistered().isEmpty());
         registry.close();
     }
@@ -186,7 +259,7 @@ class PolarisAgentRegistryTest {
                 buildCard("echo", "2.0"),
                 List.of(
                         buildTransport("JSONRPC", "h", 9000, false),
-                        buildTransport("HTTP+JSON", "h", 9001, false))));
+                        buildTransport("HTTP+JSON", "other", 9001, false))));
 
         verify(providerAPI).deRegister(deregisterCaptor.capture());
         assertEquals("inst-first", deregisterCaptor.getValue().getInstanceID());
@@ -208,7 +281,7 @@ class PolarisAgentRegistryTest {
                 buildCard("echo", "2.0"),
                 List.of(
                         buildTransport("JSONRPC", "h", 9000, false),
-                        buildTransport("HTTP+JSON", "h", 9001, false))));
+                        buildTransport("HTTP+JSON", "other", 9001, false))));
 
         assertEquals(1, registry.getRegistered().size());
         assertEquals("inst-first", registry.getRegistered().get(0).instanceId());
@@ -235,7 +308,7 @@ class PolarisAgentRegistryTest {
         assertEquals(NAMESPACE, req.getNamespace());
         assertEquals("echo", req.getService());
         assertEquals("h", req.getHost());
-        assertEquals(9000, req.getPort());
+        assertEquals(0, req.getPort());
         assertEquals("inst-x", req.getInstanceID());
     }
 
