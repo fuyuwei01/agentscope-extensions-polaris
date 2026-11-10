@@ -13,16 +13,17 @@ README:
 
 ## Introduction
 
-AgentScope Extensions Polaris is an extension for [AgentScope Java](https://github.com/agentscope-ai/agentscope-java) that integrates with [Polaris](https://polarismesh.cn/) (PolarisMesh) for MCP / A2A / Skill registration, discovery and governance.
+AgentScope Extensions Polaris is an extension for [AgentScope Java](https://github.com/agentscope-ai/agentscope-java) that integrates with [Polaris](https://polarismesh.cn/) (PolarisMesh) for A2A registration and discovery, and read-only loading of published and service-mounted Skills.
 
 - [Polaris Github](https://github.com/polarismesh/polaris)
 - [AgentScope Java Github](https://github.com/agentscope-ai/agentscope-java)
 
-AgentScope with Polaris can solve these problems:
+Currently supported capabilities:
 
-- **MCP Management** — Register MCP Server instances to Polaris on startup; discover and load-balance MCP Servers from the client side
 - **A2A Management** — Register Agent-to-Agent (A2A) endpoints to Polaris and discover peer agents dynamically
-- **Skill Management** — Store and version AgentScope Skills in Polaris for centralized distribution
+- **Skill Loading** — Load published Skills from Polaris, including the versions mounted on a service, and attach them to AgentScope agents
+
+The MCP module is currently a placeholder with dependencies only. MCP Server registration, discovery, and client-side load balancing are not implemented.
 
 ## Modules
 
@@ -30,9 +31,9 @@ AgentScope with Polaris can solve these problems:
 agentscope-extensions-polaris (root)
 ├── agentscope-extensions-polaris-bom                 # Bill of Materials
 ├── agentscope-extensions-polaris-core                # Polaris SDK wrapper (polaris-all)
-├── agentscope-extensions-polaris-mcp                 # MCP extension
+├── agentscope-extensions-polaris-mcp                 # MCP placeholder (not implemented)
 ├── agentscope-extensions-polaris-a2a                 # A2A registry / discovery
-├── agentscope-extensions-polaris-skill               # Skill extension
+├── agentscope-extensions-polaris-skill               # Read-only Skill repositories
 ├── agentscope-extensions-polaris-spring-boot-starter # Spring Boot auto-config (Boot 3.2+)
 └── agentscope-extensions-polaris-example             # Examples (not published)
 ```
@@ -61,7 +62,7 @@ try (PolarisContextManager context =
 }
 ```
 
-`serviceName` must match the A2A registration name. Run the example:
+`serviceName` identifies the Polaris service whose mounted skills should be loaded. In the A2A example below, it matches the agent's registration name. Run the example:
 
 ```bash
 POLARIS_ADDRESS=127.0.0.1:8091 POLARIS_SKILL_ADDRESS=127.0.0.1:8094 \

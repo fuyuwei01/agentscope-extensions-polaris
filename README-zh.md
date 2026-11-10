@@ -13,16 +13,17 @@ README:
 
 ## 介绍
 
-AgentScope Extensions Polaris 是一个 [AgentScope Java](https://github.com/agentscope-ai/agentscope-java) 扩展项目，集成 [北极星](https://polarismesh.cn/)（PolarisMesh）实现 MCP / A2A / Skill 的注册、发现与治理。
+AgentScope Extensions Polaris 是一个 [AgentScope Java](https://github.com/agentscope-ai/agentscope-java) 扩展项目，集成 [北极星](https://polarismesh.cn/)（PolarisMesh）实现 A2A 注册与发现，以及已发布和服务挂载 Skill 的只读加载。
 
 - [北极星 Github](https://github.com/polarismesh/polaris)
 - [AgentScope Java Github](https://github.com/agentscope-ai/agentscope-java)
 
-AgentScope 集成北极星可以解决以下问题：
+当前已支持的能力：
 
-- **MCP 管理** — MCP Server 启动时自动注册到北极星；MCP Client 从北极星发现并对实例做负载均衡
 - **A2A 管理** — Agent-to-Agent（A2A）端点注册到北极星，并动态发现对端 Agent
-- **Skill 管理** — AgentScope Skill 集中存储与版本化在北极星，统一下发
+- **Skill 加载** — 从北极星加载已发布的 Skill，包括服务挂载的指定版本，并接入 AgentScope Agent
+
+MCP 模块目前仅预留模块和依赖，尚未实现 MCP Server 注册、发现及客户端负载均衡。
 
 ## 模块
 
@@ -30,9 +31,9 @@ AgentScope 集成北极星可以解决以下问题：
 agentscope-extensions-polaris (root)
 ├── agentscope-extensions-polaris-bom                 # 版本管理 BOM
 ├── agentscope-extensions-polaris-core                # Polaris SDK 封装（polaris-all）
-├── agentscope-extensions-polaris-mcp                 # MCP 扩展
+├── agentscope-extensions-polaris-mcp                 # MCP 预留模块（尚未实现）
 ├── agentscope-extensions-polaris-a2a                 # A2A 注册 / 发现
-├── agentscope-extensions-polaris-skill               # Skill 扩展
+├── agentscope-extensions-polaris-skill               # Skill 只读仓库
 ├── agentscope-extensions-polaris-spring-boot-starter # Spring Boot 自动装配（Boot 3.2+）
 └── agentscope-extensions-polaris-example             # 示例（不发布）
 ```
@@ -61,7 +62,7 @@ try (PolarisContextManager context =
 }
 ```
 
-`serviceName` 必须与 A2A 注册名一致。运行示例：
+`serviceName` 指定要读取挂载技能的北极星服务。下面的 A2A 示例中，它与 Agent 注册名一致。运行示例：
 
 ```bash
 POLARIS_ADDRESS=127.0.0.1:8091 POLARIS_SKILL_ADDRESS=127.0.0.1:8094 \
