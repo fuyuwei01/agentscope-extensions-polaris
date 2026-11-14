@@ -76,6 +76,11 @@ adds HTTP+JSON at `/a2a/rest` on the HTTP port (default `8888`) and gRPC on `A2A
 share one agent and task store. Polaris stores the complete card on one instance.
 See each example README for build, offline testing, and registration commands.
 
+The Spring Boot client selects the target Polaris service with the demo-specific property
+`polaris.demo.discovery.agent-name` (default `polaris-a2a-example-agent`, also configurable through
+`A2A_AGENT_NAME`). For example, pass `--polaris.demo.discovery.agent-name=my-agent` when starting
+the client. This property is defined by the example, rather than the official AgentScope Starter.
+
 ## Skill Usage
 
 `PolarisSkillRepository` implements AgentScope's `AgentSkillRepository` interface and fetches published Skill packages from Polaris (read-only). See the full example at [`agentscope-extensions-polaris-example/skill/skill-client`](agentscope-extensions-polaris-example/skill/skill-client):

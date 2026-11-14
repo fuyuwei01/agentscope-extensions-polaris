@@ -74,6 +74,10 @@ A2A server 的监听端口需要单独配置。
 `additionalInterfaces` 仅声明这两个额外协议，三个协议共用一个 Agent 和任务存储；
 注册时完整卡片保存在一个北极星实例中。构建、离线测试和注册步骤见各示例 README。
 
+Spring Boot 客户端通过示例专用配置 `polaris.demo.discovery.agent-name` 选择要发现的北极星服务，
+默认 `polaris-a2a-example-agent`，也可通过 `A2A_AGENT_NAME` 环境变量设置。例如，启动客户端时传入
+`--polaris.demo.discovery.agent-name=my-agent`。该属性由本项目示例定义，不是 AgentScope 官方 Starter 的配置。
+
 ## Skill 用法
 
 `PolarisSkillRepository` 实现 AgentScope 的 `AgentSkillRepository` 接口，从北极星拉取已发布的 Skill 包（只读）。完整示例见 [`agentscope-extensions-polaris-example/skill/skill-client`](agentscope-extensions-polaris-example/skill/skill-client)：
