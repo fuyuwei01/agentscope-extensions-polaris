@@ -33,6 +33,9 @@ public final class PolarisA2aConstants {
     /** Holds the full serialized {@link io.a2a.spec.AgentCard} JSON. */
     public static final String META_AGENT_CARD = "ai-agent-card";
 
+    /** A2A protocol version declared by {@link io.a2a.spec.AgentCard#protocolVersion()}. */
+    public static final String META_A2A_VERSION = "ai-a2a-version";
+
     /** Registry name reported to AgentScope. */
     public static final String REGISTRY_NAME = "Polaris";
 

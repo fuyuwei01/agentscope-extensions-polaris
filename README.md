@@ -45,6 +45,10 @@ agentscope-extensions-polaris (root)
 Polaris instance port of `0` by default. Transports on the same host share one registration.
 The AgentCard retains the A2A endpoint URLs used by clients.
 
+Instance metadata contains `ai-agent-name`, the full AgentCard JSON in `ai-agent-card`, and
+`ai-a2a-version` from `AgentCard.protocolVersion` (currently `0.3.0` with AgentScope 1.0.12).
+The Polaris instance `version` comes from `AgentCard.version`, the agent's own version.
+
 Set `agentscope.polaris.a2a.registry.port` to override the Polaris instance port:
 
 ```yaml

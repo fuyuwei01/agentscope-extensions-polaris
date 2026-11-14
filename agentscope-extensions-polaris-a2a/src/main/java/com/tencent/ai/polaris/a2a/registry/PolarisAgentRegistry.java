@@ -17,6 +17,7 @@
 package com.tencent.ai.polaris.a2a.registry;
 
 import static com.tencent.ai.polaris.a2a.constant.PolarisA2aConstants.MAX_METADATA_VALUE_CHARS;
+import static com.tencent.ai.polaris.a2a.constant.PolarisA2aConstants.META_A2A_VERSION;
 import static com.tencent.ai.polaris.a2a.constant.PolarisA2aConstants.META_AGENT_NAME;
 
 import com.tencent.ai.polaris.a2a.constant.PolarisA2aConstants;
@@ -56,6 +57,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * <ul>
  *   <li>{@link PolarisA2aConstants#META_AGENT_CARD} — full AgentCard JSON</li>
  *   <li>{@link PolarisA2aConstants#META_AGENT_NAME} — agent name</li>
+ *   <li>{@link PolarisA2aConstants#META_A2A_VERSION} — A2A protocol version from the AgentCard</li>
  * </ul>
  * A single metadata value must be at most {@link PolarisA2aConstants#MAX_METADATA_VALUE_CHARS}
  * characters (64KiB − 1). Oversized values throw {@link IllegalArgumentException}
@@ -164,6 +166,7 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
                 }
                 Map<String, String> meta = buildMetadata(cardJson);
                 meta.put(META_AGENT_NAME, agentCard.name());
+                meta.put(META_A2A_VERSION, agentCard.protocolVersion());
                 assertMetadataWithinLimit(service, meta);
                 req.setMetadata(meta);
 
@@ -191,8 +194,7 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
     }
 
     /**
-     * Card metadata for an instance. {@link PolarisA2aConstants#META_AGENT_NAME}
-     * is added by the caller after this map is built.
+     * Card metadata for an instance. The caller adds the agent name and A2A protocol version.
      */
     static Map<String, String> buildMetadata(String cardJson) {
         Map<String, String> meta = new HashMap<>();

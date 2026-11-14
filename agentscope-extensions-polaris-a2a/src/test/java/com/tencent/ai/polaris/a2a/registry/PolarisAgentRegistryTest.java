@@ -90,7 +90,7 @@ class PolarisAgentRegistryTest {
     }
 
     @Test
-    void register_putsOnlyAgentCardAndNameInMetadataAndSetsServiceToken() throws PolarisException {
+    void register_putsAgentCardNameAndA2aVersionInMetadataAndSetsServiceToken() throws PolarisException {
         when(providerAPI.registerInstance(any(InstanceRegisterRequest.class)))
                 .thenReturn(new InstanceRegisterResponse("inst-1", false));
 
@@ -117,7 +117,8 @@ class PolarisAgentRegistryTest {
         assertEquals("svc-token", first.getToken());
         assertEquals(Map.of(
                 "ai-agent-card", AgentCardCodec.toJson(card),
-                "ai-agent-name", "weather-agent"), first.getMetadata());
+                "ai-agent-name", "weather-agent",
+                "ai-a2a-version", "0.3.0"), first.getMetadata());
 
         InstanceRegisterRequest second = requests.get(1);
         assertEquals("10.0.0.2", second.getHost());
@@ -127,6 +128,25 @@ class PolarisAgentRegistryTest {
 
         assertEquals(2, registry.getRegistered().size());
         assertEquals("inst-1", registry.getRegistered().get(0).instanceId());
+    }
+
+    @Test
+    void register_usesCardProtocolVersionSeparatelyFromAgentVersion() throws PolarisException {
+        when(providerAPI.registerInstance(any(InstanceRegisterRequest.class)))
+                .thenReturn(new InstanceRegisterResponse("inst-1", false));
+        PolarisAgentRegistry registry = new PolarisAgentRegistry(providerAPI, NAMESPACE, 5);
+        AgentCard card = new AgentCard.Builder(buildCard("echo", "2.0.0"))
+                .protocolVersion("0.2.9")
+                .build();
+
+        registry.register(card, List.of(buildTransport("JSONRPC", "h", 8080, false)));
+
+        verify(providerAPI).registerInstance(registerCaptor.capture());
+        InstanceRegisterRequest request = registerCaptor.getValue();
+        assertEquals("0.2.9", request.getMetadata().get("ai-a2a-version"));
+        assertEquals("2.0.0", request.getVersion());
+        assertEquals("0.2.9",
+                AgentCardCodec.fromJson(request.getMetadata().get("ai-agent-card")).protocolVersion());
     }
 
     @Test

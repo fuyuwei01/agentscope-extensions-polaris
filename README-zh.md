@@ -44,6 +44,10 @@ agentscope-extensions-polaris (root)
 `PolarisAgentRegistry` 默认以空协议和端口 `0` 向北极星注册每个不同的 transport host。
 同一 host 上的多个 transport 共用一个注册实例。客户端访问的 A2A 端点 URL 保留在 AgentCard 中。
 
+实例元数据包含 `ai-agent-name`、保存完整 AgentCard JSON 的 `ai-agent-card`，以及表示 A2A 协议版本的
+`ai-a2a-version`。协议版本取自 `AgentCard.protocolVersion`，当前 AgentScope 1.0.12 使用 `0.3.0`。
+北极星实例的 `version` 仍取自 `AgentCard.version`，表示 Agent 自身的业务版本。
+
 通过 `agentscope.polaris.a2a.registry.port` 可以指定北极星实例注册端口：
 
 ```yaml
