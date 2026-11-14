@@ -14,7 +14,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package com.tencent.ai.polaris.example.a2a.server.springboot;
+package com.tencent.ai.polaris.example.a2a.server.interfaces;
 
 import io.a2a.spec.TransportProtocol;
 import io.a2a.transport.grpc.context.GrpcContextKeys;

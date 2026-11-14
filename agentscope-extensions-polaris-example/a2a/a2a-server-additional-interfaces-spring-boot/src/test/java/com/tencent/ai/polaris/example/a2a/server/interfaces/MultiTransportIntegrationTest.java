@@ -14,7 +14,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package com.tencent.ai.polaris.example.a2a.server.springboot;
+package com.tencent.ai.polaris.example.a2a.server.interfaces;
 
 import com.tencent.ai.polaris.a2a.util.AgentCardCodec;
 import io.a2a.client.Client;
@@ -75,7 +75,7 @@ class MultiTransportIntegrationTest {
         while (grpcPort == httpPort) {
             grpcPort = availablePort();
         }
-        SpringApplication app = new SpringApplication(PolarisA2aServerSpringBootExample.class);
+        SpringApplication app = new SpringApplication(PolarisA2aAdditionalInterfacesSpringBootExample.class);
         try (ConfigurableApplicationContext ignored = app.run(
                 "--server.port=" + httpPort, "--server.servlet.context-path=" + contextPath,
                 "--agentscope.a2a.server.rest.path=" + (contextPath.isEmpty() ? "/a2a/rest" : "/http"),

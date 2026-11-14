@@ -64,13 +64,17 @@ For pure Java, use `PolarisAgentRegistry.builder(context).port(18080).build()`.
 The original plain Java and Spring Boot A2A server examples accept `POLARIS_REGISTRY_PORT` (default `1`). This setting affects
 registration and deregistration; configure the A2A server's listen port separately.
 
-### Spring Boot Server Transports
+### Spring Boot Server Examples
 
 [`a2a-server-spring-boot`](agentscope-extensions-polaris-example/a2a/a2a-server-spring-boot)
-serves the main JSON-RPC interface at `/` and declares HTTP+JSON and gRPC in `additionalInterfaces`.
-HTTP+JSON uses `/a2a/rest` on the HTTP port (default `8888`); gRPC listens on `A2A_GRPC_PORT`
-(default `8889`). All three transports share one agent and task store, and Polaris stores the complete
-card on one instance. See the example README for build, offline testing, and registration commands.
+uses the official AgentScope Starter to serve JSON-RPC at `/` and register the agent to Polaris.
+Start here for the basic Spring Boot integration.
+
+The advanced [`a2a-server-additional-interfaces-spring-boot`](agentscope-extensions-polaris-example/a2a/a2a-server-additional-interfaces-spring-boot)
+adds HTTP+JSON at `/a2a/rest` on the HTTP port (default `8888`) and gRPC on `A2A_GRPC_PORT`
+(default `8889`). It declares these two protocols in `additionalInterfaces`; all three transports
+share one agent and task store. Polaris stores the complete card on one instance.
+See each example README for build, offline testing, and registration commands.
 
 ## Skill Usage
 

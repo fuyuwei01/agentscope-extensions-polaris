@@ -25,17 +25,12 @@ import org.springframework.context.annotation.Bean;
 /**
  * Spring Boot A2A server example backed by Polaris.
  *
- * <p>The {@code agentscope-spring-boot-starter} builds the {@link io.agentscope.core.ReActAgent}
- * from {@code agentscope.*} config; the A2A Spring Boot starter assembles
- * {@link io.agentscope.core.a2a.server.AgentScopeA2aServer} and the JSON-RPC controller.
- * {@link TransportConfiguration} supplies additional transports through the starter SPI, which collects every
+ * <p>Almost zero wiring: the {@code agentscope-spring-boot-starter} builds the {@link io.agentscope.core.ReActAgent}
+ * from {@code agentscope.*} config; the {@code agentscope-a2a-spring-boot-starter} assembles
+ * {@link io.agentscope.core.a2a.server.AgentScopeA2aServer} + the JSON-RPC controller and collects every
  * {@link io.agentscope.core.a2a.server.registry.AgentRegistry} bean (including the {@code PolarisAgentRegistry}
  * contributed by our own {@code agentscope-extensions-polaris-spring-boot-starter}). On {@code ApplicationReadyEvent}
  * the server registers the agent card + transport to Polaris.
- *
- * <p>The main JSON-RPC interface listens on the HTTP port (default 8888). The same agent
- * is exposed through HTTP+JSON at {@code /a2a/rest} and gRPC on a separate port (default 8889).
- * Both are declared in {@code additionalInterfaces} and share the request handler and task store.
  *
  * <p>Configure via {@code src/main/resources/application.yml} (or env vars), then run:
  * <pre>{@code

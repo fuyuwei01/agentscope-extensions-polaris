@@ -36,6 +36,7 @@
         <module>a2a-server</module>
         <module>a2a-client</module>
         <module>a2a-server-spring-boot</module>
+        <module>a2a-server-additional-interfaces-spring-boot</module>
         <module>a2a-client-spring-boot</module>
     </modules>
 

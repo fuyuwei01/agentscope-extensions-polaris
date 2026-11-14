@@ -1,0 +1,2 @@
+com.tencent.ai.polaris.example.a2a.server.interfaces.RestTransportWrapperBuilder
+com.tencent.ai.polaris.example.a2a.server.interfaces.GrpcTransportWrapperBuilder

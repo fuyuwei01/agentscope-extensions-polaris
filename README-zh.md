@@ -63,13 +63,16 @@ agentscope:
 原有的纯 Java 和 Spring Boot A2A server 示例都支持 `POLARIS_REGISTRY_PORT` 环境变量，默认 `1`。该设置用于注册和注销；
 A2A server 的监听端口需要单独配置。
 
-### Spring Boot 服务端协议
+### Spring Boot 服务端示例
 
-[`a2a-server-spring-boot`](agentscope-extensions-polaris-example/a2a/a2a-server-spring-boot)
-使用 `/` 作为 JSON-RPC 主接口，在 `additionalInterfaces` 中仅声明 HTTP+JSON 和 gRPC。
-HTTP+JSON 使用 HTTP 端口（默认 `8888`）上的 `/a2a/rest`，gRPC 使用 `A2A_GRPC_PORT`（默认 `8889`）。
-三个协议共用一个 Agent 和任务存储；注册时完整卡片保存在一个北极星实例中。
-构建、离线测试和注册步骤见示例 README。
+基础示例 [`a2a-server-spring-boot`](agentscope-extensions-polaris-example/a2a/a2a-server-spring-boot)
+直接使用官方 AgentScope Starter，提供 `/` 上的 JSON-RPC 接口并注册到北极星。
+学习 Spring Boot 基础接入时从该示例开始。
+
+进阶示例 [`a2a-server-additional-interfaces-spring-boot`](agentscope-extensions-polaris-example/a2a/a2a-server-additional-interfaces-spring-boot)
+增加 HTTP 端口（默认 `8888`）上的 HTTP+JSON `/a2a/rest`，以及 `A2A_GRPC_PORT`（默认 `8889`）上的 gRPC。
+`additionalInterfaces` 仅声明这两个额外协议，三个协议共用一个 Agent 和任务存储；
+注册时完整卡片保存在一个北极星实例中。构建、离线测试和注册步骤见各示例 README。
 
 ## Skill 用法
 

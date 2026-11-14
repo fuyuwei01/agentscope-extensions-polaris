@@ -1,0 +1,2 @@
+com.tencent.ai.polaris.example.a2a.server.interfaces.ServerTransportMetadata$Rest
+com.tencent.ai.polaris.example.a2a.server.interfaces.ServerTransportMetadata$Grpc
