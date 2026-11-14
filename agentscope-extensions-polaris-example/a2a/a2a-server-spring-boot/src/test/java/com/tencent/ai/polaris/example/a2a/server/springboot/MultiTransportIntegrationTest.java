@@ -75,7 +75,7 @@ class MultiTransportIntegrationTest {
         }
         SpringApplication app = new SpringApplication(PolarisA2aServerSpringBootExample.class);
         try (ConfigurableApplicationContext ignored = app.run(
-                "--server.address=127.0.0.1", "--server.port=" + httpPort,
+                "--server.port=" + httpPort,
                 "--agentscope.a2a.server.grpc.port=" + grpcPort, "--agentscope.polaris.enabled=false",
                 "--agentscope.model.provider=echo-last-user-input", "--agentscope.polaris.skill.enabled=false")) {
             verifyServer("http://127.0.0.1:" + httpPort, grpcPort);
@@ -104,7 +104,11 @@ class MultiTransportIntegrationTest {
                 .filter(i -> i.transport().equals("GRPC")).findFirst().orElseThrow();
         assertThat(URI.create(grpcInterface.url()).getPort()).isEqualTo(grpcPort);
 
-        ManagedChannel channel = ManagedChannelBuilder.forAddress(URI.create(baseUrl).getHost(), grpcPort)
+        String instanceIp = URI.create(card.url()).getHost();
+        assertThat(URI.create(restInterface.url()).getHost()).isEqualTo(instanceIp);
+        assertThat(URI.create(grpcInterface.url()).getHost()).isEqualTo(instanceIp);
+        assertThat(instanceIp).isNotEqualTo("0.0.0.0");
+        ManagedChannel channel = ManagedChannelBuilder.forAddress(instanceIp, grpcPort)
                 .usePlaintext().build();
         GrpcTransport grpc = new GrpcTransport(channel, card);
         RestTransport rest = new RestTransport(null, card, restInterface.url(), List.of());

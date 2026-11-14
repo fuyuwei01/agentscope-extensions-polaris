@@ -25,9 +25,10 @@ import org.springframework.context.annotation.Bean;
 /**
  * Spring Boot A2A server example backed by Polaris.
  *
- * <p>Almost zero wiring: the {@code agentscope-spring-boot-starter} builds the {@link io.agentscope.core.ReActAgent}
- * from {@code agentscope.*} config; the {@code agentscope-a2a-spring-boot-starter} assembles
- * {@link io.agentscope.core.a2a.server.AgentScopeA2aServer} + the JSON-RPC controller and collects every
+ * <p>The {@code agentscope-spring-boot-starter} builds the {@link io.agentscope.core.ReActAgent}
+ * from {@code agentscope.*} config; {@link TransportConfiguration} assembles
+ * {@link io.agentscope.core.a2a.server.AgentScopeA2aServer} with an automatically resolved instance IP.
+ * The A2A starter provides the JSON-RPC controller, and the server collects every
  * {@link io.agentscope.core.a2a.server.registry.AgentRegistry} bean (including the {@code PolarisAgentRegistry}
  * contributed by our own {@code agentscope-extensions-polaris-spring-boot-starter}). On {@code ApplicationReadyEvent}
  * the server registers the agent card + transport to Polaris.

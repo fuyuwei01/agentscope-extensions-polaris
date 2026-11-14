@@ -28,8 +28,12 @@ import com.tencent.polaris.api.rpc.InstanceRegisterResponse;
 import com.tencent.polaris.api.rpc.InstancesResponse;
 import io.a2a.spec.AgentCard;
 import io.agentscope.core.a2a.server.AgentScopeA2aServer;
-import org.junit.jupiter.api.Test;
+import io.agentscope.core.a2a.server.utils.NetworkUtils;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
@@ -41,57 +45,66 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TransportRegistrationTest {
 
-    @Test
-    void configuredInterfacesSurviveRegistrationAndDiscovery() {
-        new WebApplicationContextRunner()
-                .withInitializer(new ConfigDataApplicationContextInitializer())
-                .withUserConfiguration(PolarisA2aServerSpringBootExample.class,
-                        PolarisTestConfiguration.class)
-                .withPropertyValues("server.address=127.0.0.1", "server.port=18890",
-                        "agentscope.a2a.server.grpc.port=18891",
-                        "agentscope.model.provider=echo-last-user-input", "agentscope.polaris.skill.enabled=false",
-                        "agentscope.polaris.a2a.registry.port=19090")
-                .run(application -> {
-                    assertThat(application).hasNotFailed();
-                    AgentScopeA2aServer server = application.getBean(AgentScopeA2aServer.class);
-                    AgentCard card = server.getAgentCard();
-                    List<String> urls = List.of("http://127.0.0.1:18890/a2a/rest",
-                            "http://127.0.0.1:18891");
-                    assertThat(card.url()).isEqualTo("http://127.0.0.1:18890/");
-                    assertThat(card.preferredTransport()).isEqualTo("JSONRPC");
-                    assertThat(card.additionalInterfaces()).extracting("url").containsExactlyElementsOf(urls);
-                    assertThat(card.additionalInterfaces()).extracting("transport")
-                            .containsExactly("HTTP+JSON", "GRPC");
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"0.0.0.0", "127.0.0.1"})
+    void automaticInstanceIpSurvivesRegistrationAndDiscovery(String bindAddress) {
+        try (MockedStatic<NetworkUtils> network = mockStatic(NetworkUtils.class)) {
+            network.when(NetworkUtils::getLocalIpAddress).thenReturn("10.20.30.40");
+            WebApplicationContextRunner runner = new WebApplicationContextRunner()
+                    .withInitializer(new ConfigDataApplicationContextInitializer())
+                    .withUserConfiguration(PolarisA2aServerSpringBootExample.class,
+                            PolarisTestConfiguration.class)
+                    .withPropertyValues("server.port=18890",
+                            "agentscope.a2a.server.grpc.port=18891",
+                            "agentscope.model.provider=echo-last-user-input", "agentscope.polaris.skill.enabled=false",
+                            "agentscope.polaris.a2a.registry.port=19090");
+            if (bindAddress != null) {
+                runner = runner.withPropertyValues("server.address=" + bindAddress);
+            }
+            runner.run(application -> {
+                assertThat(application).hasNotFailed();
+                AgentScopeA2aServer server = application.getBean(AgentScopeA2aServer.class);
+                AgentCard card = server.getAgentCard();
+                List<String> urls = List.of("http://10.20.30.40:18890/a2a/rest",
+                        "http://10.20.30.40:18891");
+                assertThat(card.url()).isEqualTo("http://10.20.30.40:18890/");
+                assertThat(card.preferredTransport()).isEqualTo("JSONRPC");
+                assertThat(card.additionalInterfaces()).extracting("url").containsExactlyElementsOf(urls);
+                assertThat(card.additionalInterfaces()).extracting("transport")
+                        .containsExactly("HTTP+JSON", "GRPC");
 
-                    PolarisContextManager context = application.getBean(PolarisContextManager.class);
-                    server.postEndpointReady();
-                    ArgumentCaptor<InstanceRegisterRequest> captor = ArgumentCaptor.forClass(InstanceRegisterRequest.class);
-                    verify(context.providerAPI()).registerInstance(captor.capture());
-                    InstanceRegisterRequest request = captor.getValue();
-                    assertThat(request.getHost()).isEqualTo("127.0.0.1");
-                    assertThat(request.getPort()).isEqualTo(19090);
-                    assertThat(request.getProtocol()).isEmpty();
-                    assertThat(request.getMetadata().keySet())
-                            .isEqualTo(Set.of("ai-agent-name", "ai-agent-card", "ai-a2a-version"));
-                    assertThat(request.getMetadata().get("ai-a2a-version")).isEqualTo("0.3.0");
-                    assertThat(AgentCardCodec.fromJson(request.getMetadata().get("ai-agent-card"))).isEqualTo(card);
+                PolarisContextManager context = application.getBean(PolarisContextManager.class);
+                server.postEndpointReady();
+                ArgumentCaptor<InstanceRegisterRequest> captor = ArgumentCaptor.forClass(InstanceRegisterRequest.class);
+                verify(context.providerAPI()).registerInstance(captor.capture());
+                InstanceRegisterRequest request = captor.getValue();
+                assertThat(request.getHost()).isEqualTo("10.20.30.40");
+                assertThat(request.getPort()).isEqualTo(19090);
+                assertThat(request.getProtocol()).isEmpty();
+                assertThat(request.getMetadata().keySet())
+                        .isEqualTo(Set.of("ai-agent-name", "ai-agent-card", "ai-a2a-version"));
+                assertThat(request.getMetadata().get("ai-a2a-version")).isEqualTo("0.3.0");
+                assertThat(AgentCardCodec.fromJson(request.getMetadata().get("ai-agent-card"))).isEqualTo(card);
 
-                    Instance instance = mock(Instance.class);
-                    when(instance.getHost()).thenReturn(request.getHost());
-                    when(instance.getPort()).thenReturn(request.getPort());
-                    when(instance.getMetadata()).thenReturn(request.getMetadata());
-                    InstancesResponse response = mock(InstancesResponse.class);
-                    when(response.getInstances()).thenReturn(new Instance[]{instance});
-                    when(context.consumerAPI().getHealthyInstances(any(GetHealthyInstancesRequest.class)))
-                            .thenReturn(response);
-                    assertThat(application.getBean(PolarisAgentCardResolver.class).getAgentCard(card.name()))
-                            .isEqualTo(card);
-                });
+                Instance instance = mock(Instance.class);
+                when(instance.getHost()).thenReturn(request.getHost());
+                when(instance.getPort()).thenReturn(request.getPort());
+                when(instance.getMetadata()).thenReturn(request.getMetadata());
+                InstancesResponse response = mock(InstancesResponse.class);
+                when(response.getInstances()).thenReturn(new Instance[]{instance});
+                when(context.consumerAPI().getHealthyInstances(any(GetHealthyInstancesRequest.class)))
+                        .thenReturn(response);
+                assertThat(application.getBean(PolarisAgentCardResolver.class).getAgentCard(card.name()))
+                        .isEqualTo(card);
+            });
+        }
     }
 
     @TestConfiguration(proxyBeanMethods = false)

@@ -1,7 +1,5 @@
 # A2A Spring Boot Server Example Configuration
 server:
-  # Use a local IP reachable by clients when deploying to another machine.
-  address: ${A2A_SERVER_HOST:127.0.0.1}
   port: ${A2A_SERVER_PORT:8888}
 
 spring:
@@ -43,12 +41,6 @@ agentscope:
         description: "A2A agent registered to Polaris (Spring Boot example)"
         version: "1.0.0"
         preferred-transport: JSONRPC
-        url: "http://${server.address}:${server.port}/"
-        additional-interfaces:
-          - transport: HTTP+JSON
-            url: "http://${server.address}:${server.port}/a2a/rest"
-          - transport: GRPC
-            url: "http://${server.address}:${agentscope.a2a.server.grpc.port}"
         provider:
           organization: AgentScope Extensions Polaris
           url: https://github.com/polarismesh/agentscope-extensions-polaris

@@ -16,17 +16,75 @@
 
 package com.tencent.ai.polaris.example.a2a.server.springboot;
 
+import io.a2a.spec.AgentInterface;
 import io.a2a.spec.TransportProtocol;
+import io.agentscope.core.a2a.server.AgentScopeA2aServer;
+import io.agentscope.core.a2a.server.card.ConfigurableAgentCard;
+import io.agentscope.core.a2a.server.executor.AgentExecuteProperties;
+import io.agentscope.core.a2a.server.executor.runner.AgentRunner;
+import io.agentscope.core.a2a.server.registry.AgentRegistry;
 import io.agentscope.core.a2a.server.transport.CustomTransportProperties;
 import io.agentscope.core.a2a.server.transport.DeploymentProperties;
 import io.agentscope.core.a2a.server.transport.TransportProperties;
+import io.agentscope.spring.boot.a2a.properties.A2aAgentCardProperties;
+import io.agentscope.spring.boot.a2a.properties.A2aCommonProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 
-/** Supplies the two extra transports to AgentScope's existing server auto-configuration. */
+import java.util.List;
+
+/** Assembles the three transports with one automatically resolved instance IP. */
 @Configuration(proxyBeanMethods = false)
 public class TransportConfiguration {
+
+    @Bean
+    AgentScopeA2aServer agentScopeA2aServer(
+            AgentRunner agentRunner, A2aAgentCardProperties card, A2aCommonProperties common,
+            Environment environment, List<AgentRegistry> registries,
+            List<CustomTransportProperties> transports,
+            @Value("${agentscope.a2a.server.grpc.port:8889}") int grpcPort) {
+        // server.address controls socket binding; it must not become the advertised IP.
+        DeploymentProperties deployment = new DeploymentProperties.Builder()
+                .port(environment.getProperty("server.port", Integer.class, 8888))
+                .path(environment.getProperty("server.servlet.context-path"))
+                .build();
+        String contextPath = deployment.path() == null ? "" : deployment.path();
+        String httpUrl = "http://" + deployment.host() + ":" + deployment.port() + contextPath;
+        ConfigurableAgentCard configuredCard = new ConfigurableAgentCard.Builder()
+                .name(card.getName())
+                .description(card.getDescription())
+                .provider(card.getProvider())
+                .version(card.getVersion())
+                .documentationUrl(card.getDocumentationUrl())
+                .defaultInputModes(card.getDefaultInputModes())
+                .defaultOutputModes(card.getDefaultOutputModes())
+                .skills(card.getSkills())
+                .securitySchemes(card.getSecuritySchemes())
+                .security(card.getSecurity())
+                .iconUrl(card.getIconUrl())
+                .preferredTransport(TransportProtocol.JSONRPC.asString())
+                .url(httpUrl + "/")
+                .additionalInterfaces(List.of(
+                        new AgentInterface(TransportProtocol.HTTP_JSON.asString(), httpUrl + "/a2a/rest"),
+                        new AgentInterface(TransportProtocol.GRPC.asString(),
+                                "http://" + deployment.host() + ":" + grpcPort)))
+                .build();
+        AgentScopeA2aServer.Builder builder = AgentScopeA2aServer.builder(agentRunner)
+                .deploymentProperties(deployment)
+                .agentCard(configuredCard)
+                .agentExecuteProperties(AgentExecuteProperties.builder()
+                        .completeWithMessage(common.isCompleteWithMessage())
+                        .requireInnerMessage(common.isRequireInnerMessage())
+                        .build());
+        transports.stream().filter(CustomTransportProperties::isEnabled).forEach(transport -> {
+            transport.setDeploymentProperties(deployment);
+            builder.withTransport(transport.toTransportProperties());
+        });
+        registries.forEach(builder::withAgentRegistry);
+        return builder.build();
+    }
 
     @Bean
     CustomTransportProperties restTransportProperties() {

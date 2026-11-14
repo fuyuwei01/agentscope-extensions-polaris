@@ -2,9 +2,9 @@
 
 原有 Spring Boot 服务端同时提供 A2A 0.3 的三个协议，使用同一个 Agent、请求处理器和任务存储：
 
-- JSON-RPC 主接口：`http://<A2A_SERVER_HOST>:8888/`。
-- HTTP+JSON additional interface：`http://<A2A_SERVER_HOST>:8888/a2a/rest`。
-- gRPC additional interface：`http://<A2A_SERVER_HOST>:8889`，使用明文 HTTP/2。
+- JSON-RPC 主接口：`http://<INSTANCE_IP>:8888/`。
+- HTTP+JSON additional interface：`http://<INSTANCE_IP>:8888/a2a/rest`。
+- gRPC additional interface：`http://<INSTANCE_IP>:8889`，使用明文 HTTP/2。
 
 `additionalInterfaces` 仅包含 HTTP+JSON 和 gRPC 两项。JSON-RPC 主接口由 `url` 和
 `preferredTransport: JSONRPC` 表示。没有额外的 JSON-RPC 路径别名，也没有独立的多接口 demo 模块。
@@ -25,11 +25,11 @@ agentscope-extensions-polaris-example/a2a/a2a-server-spring-boot/target/agentsco
 
 ## 启动并注册到北极星
 
-上传 JAR 后，使用本机可绑定、客户端可访问的 IP。`A2A_SERVER_HOST` 同时用于 HTTP/gRPC
-监听地址、AgentCard URL 和注册 host。默认 `127.0.0.1` 适用于本地测试。
+无需配置实例 IP。应用复用 AgentScope 的网络工具，自动获取本机非回环 IPv4 地址，
+用于 JSON-RPC、HTTP+JSON、gRPC 的 AgentCard URL 和北极星注册 host。HTTP 和 gRPC
+默认监听所有网卡；`server.address` 仅用于限制监听地址，不用于生成上报 IP。
 
 ```bash
-export A2A_SERVER_HOST='<SERVER_IP>'
 export A2A_SERVER_PORT='8888'
 export A2A_GRPC_PORT='8889'
 export A2A_AGENT_NAME='polaris-a2a-example-agent'
@@ -63,7 +63,7 @@ A2A_MODEL_PROVIDER=echo-last-user-input java -jar \
   --agentscope.polaris.enabled=false --agentscope.polaris.skill.enabled=false
 
 # 在另一终端设置请求地址：
-export A2A_SERVER_HOST='127.0.0.1'
+export TEST_SERVER_HOST='127.0.0.1'
 export A2A_SERVER_PORT='8888'
 export A2A_GRPC_PORT='8889'
 ```
@@ -71,23 +71,26 @@ export A2A_GRPC_PORT='8889'
 ## 检查 AgentCard
 
 ```bash
-curl -fsS "http://${A2A_SERVER_HOST}:${A2A_SERVER_PORT}/.well-known/agent-card.json"
+curl -fsS "http://${TEST_SERVER_HOST}:${A2A_SERVER_PORT}/.well-known/agent-card.json"
 ```
+
+`TEST_SERVER_HOST` 是请求命令使用的目标地址，仅在客户端终端设置；远程测试时替换为
+AgentCard 中自动生成的实例 IP。
 
 预期 `protocolVersion` 为 `0.3.0`，主接口 `url` 以 `/` 结尾，`preferredTransport` 为 `JSONRPC`。
 `additionalInterfaces` 为以下两项，端口分别取自 HTTP 和 gRPC 的实际监听设置：
 
 ```json
 [
-  {"transport":"HTTP+JSON","url":"http://<SERVER_IP>:8888/a2a/rest"},
-  {"transport":"GRPC","url":"http://<SERVER_IP>:8889"}
+  {"transport":"HTTP+JSON","url":"http://<INSTANCE_IP>:8888/a2a/rest"},
+  {"transport":"GRPC","url":"http://<INSTANCE_IP>:8889"}
 ]
 ```
 
 ## JSON-RPC 调用
 
 ```bash
-curl -fsS "http://${A2A_SERVER_HOST}:${A2A_SERVER_PORT}/" \
+curl -fsS "http://${TEST_SERVER_HOST}:${A2A_SERVER_PORT}/" \
   -H 'Content-Type: application/json' \
   --data-binary '{"jsonrpc":"2.0","id":"jsonrpc-test","method":"message/send","params":{"message":{"role":"user","kind":"message","parts":[{"kind":"text","text":"hello-polaris"}],"messageId":"jsonrpc-message"}}}'
 ```
@@ -100,11 +103,11 @@ HTTP+JSON 使用 SDK 的 Protobuf JSON 格式：外层字段是 `request`，用�
 文本 part 直接使用 `text`。不包含 JSON-RPC 的 `jsonrpc`、`id`、`method` 和 `params`。
 
 ```bash
-curl -fsS "http://${A2A_SERVER_HOST}:${A2A_SERVER_PORT}/a2a/rest/v1/message:send" \
+curl -fsS "http://${TEST_SERVER_HOST}:${A2A_SERVER_PORT}/a2a/rest/v1/message:send" \
   -H 'Content-Type: application/json' \
   --data-binary '{"request":{"messageId":"rest-message","role":"ROLE_USER","content":[{"text":"hello-polaris"}]}}'
 
-curl -N --max-time 30 "http://${A2A_SERVER_HOST}:${A2A_SERVER_PORT}/a2a/rest/v1/message:stream" \
+curl -N --max-time 30 "http://${TEST_SERVER_HOST}:${A2A_SERVER_PORT}/a2a/rest/v1/message:stream" \
   -H 'Content-Type: application/json' -H 'Accept: text/event-stream' \
   --data-binary '{"request":{"messageId":"rest-stream-message","role":"ROLE_USER","content":[{"text":"hello-polaris"}]}}'
 ```
@@ -119,17 +122,17 @@ curl -N --max-time 30 "http://${A2A_SERVER_HOST}:${A2A_SERVER_PORT}/a2a/rest/v1/
 服务端开启 gRPC reflection，可直接使用已安装的 `grpcurl`，无需手动准备 proto：
 
 ```bash
-grpcurl -plaintext "${A2A_SERVER_HOST}:${A2A_GRPC_PORT}" list
+grpcurl -plaintext "${TEST_SERVER_HOST}:${A2A_GRPC_PORT}" list
 
-grpcurl -plaintext -d '{}' "${A2A_SERVER_HOST}:${A2A_GRPC_PORT}" a2a.v1.A2AService/GetAgentCard
+grpcurl -plaintext -d '{}' "${TEST_SERVER_HOST}:${A2A_GRPC_PORT}" a2a.v1.A2AService/GetAgentCard
 
 grpcurl -plaintext \
   -d '{"request":{"messageId":"grpc-message","role":"ROLE_USER","content":[{"text":"hello-polaris"}]}}' \
-  "${A2A_SERVER_HOST}:${A2A_GRPC_PORT}" a2a.v1.A2AService/SendMessage
+  "${TEST_SERVER_HOST}:${A2A_GRPC_PORT}" a2a.v1.A2AService/SendMessage
 
 grpcurl -plaintext \
   -d '{"request":{"messageId":"grpc-stream-message","role":"ROLE_USER","content":[{"text":"hello-polaris"}]}}' \
-  "${A2A_SERVER_HOST}:${A2A_GRPC_PORT}" a2a.v1.A2AService/SendStreamingMessage
+  "${TEST_SERVER_HOST}:${A2A_GRPC_PORT}" a2a.v1.A2AService/SendStreamingMessage
 ```
 
 预期普通响应和流式事件均包含 `hello-polaris`。gRPC 任务查询方法是 `a2a.v1.A2AService/GetTask`，
@@ -139,7 +142,7 @@ grpcurl -plaintext \
 
 在 `POLARIS_NAMESPACE` 中查找 `A2A_AGENT_NAME` 对应服务，预期只注册一个实例：
 
-- host 为 `A2A_SERVER_HOST`，port 为 `POLARIS_REGISTRY_PORT`，protocol 为空。
+- host 为自动获取的实例 IP（与三个 AgentCard URL 中的 host 相同），port 为 `POLARIS_REGISTRY_PORT`，protocol 为空。
 - 元数据只有 `ai-agent-name`、`ai-agent-card`、`ai-a2a-version`；协议版本为 `0.3.0`。
 - `ai-agent-card` 保留 JSON-RPC 主 URL 和两个 additional interface 的实际调用地址。
 
@@ -153,6 +156,8 @@ mvn -pl agentscope-extensions-polaris-example/a2a/a2a-server-spring-boot -am tes
 ```
 
 `MultiTransportIntegrationTest` 启动真实 HTTP/gRPC 服务，验证三种协议的普通和流式请求、跨协议任务查询、
-客户端从 additionalInterfaces 选择 HTTP+JSON/gRPC、错误请求和监听端口释放。
-`TransportRegistrationTest` 使用模拟 Polaris API，验证只有两个 additional interface，三种协议在同一 host
-上只注册一个实例，以及元数据和完整卡片的注册发现。真实北极星后端注册与注销需要在测试环境复测。
+客户端通过自动生成的实例地址调用三种协议、从 additionalInterfaces 选择 HTTP+JSON/gRPC、
+错误请求和监听端口释放。
+`TransportRegistrationTest` 使用模拟 Polaris API 和固定的自动探测 IP，验证无需配置
+`server.address`，或者把它设为 `0.0.0.0` / `127.0.0.1` 时，均上报自动探测的实例 IP；
+同时验证只有两个 additional interface、只注册一个实例，以及元数据和完整卡片的注册发现。真实北极星后端注册与注销需要在测试环境复测。

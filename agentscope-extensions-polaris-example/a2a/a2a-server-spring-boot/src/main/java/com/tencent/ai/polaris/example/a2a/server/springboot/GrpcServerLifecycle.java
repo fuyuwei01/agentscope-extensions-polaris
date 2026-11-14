@@ -52,7 +52,7 @@ public class GrpcServerLifecycle implements ApplicationListener<WebServerInitial
 
     public GrpcServerLifecycle(
             AgentScopeA2aServer a2aServer,
-            @Value("${server.address:127.0.0.1}") String host,
+            @Value("${server.address:0.0.0.0}") String host,
             @Value("${agentscope.a2a.server.grpc.port:8889}") int port) {
         this.a2aServer = a2aServer;
         this.host = host;
