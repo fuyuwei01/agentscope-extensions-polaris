@@ -41,6 +41,13 @@ agentscope:
         description: "A2A agent registered to Polaris (Spring Boot example)"
         version: "1.0.0"
         preferred-transport: JSONRPC
+        # a2a.instance-ip is supplied automatically before the starter binds these properties.
+        url: "http://${a2a.instance-ip}:${server.port}${server.servlet.context-path:}/"
+        additional-interfaces:
+          - transport: HTTP+JSON
+            url: "http://${a2a.instance-ip}:${server.port}${server.servlet.context-path:}${agentscope.a2a.server.rest.path}"
+          - transport: GRPC
+            url: "http://${a2a.instance-ip}:${agentscope.a2a.server.grpc.port}"
         provider:
           organization: AgentScope Extensions Polaris
           url: https://github.com/polarismesh/agentscope-extensions-polaris
@@ -59,6 +66,8 @@ agentscope:
             tags: [time]
       grpc:
         port: ${A2A_GRPC_PORT:8889}
+      rest:
+        path: /a2a/rest
   polaris:
     enabled: ${POLARIS_ENABLED:true}
     address: ${POLARIS_DISCOVERY_ADDRESS:127.0.0.1:8091}

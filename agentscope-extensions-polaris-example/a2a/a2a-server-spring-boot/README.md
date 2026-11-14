@@ -1,6 +1,7 @@
 # A2A Spring Boot Server
 
-原有 Spring Boot 服务端同时提供 A2A 0.3 的三个协议，使用同一个 Agent、请求处理器和任务存储：
+Spring Boot 服务端由 AgentScope 的 A2A Starter 创建和管理，提供 A2A 0.3 的三个协议，
+使用同一个 Agent、请求处理器和任务存储：
 
 - JSON-RPC 主接口：`http://<INSTANCE_IP>:8888/`。
 - HTTP+JSON additional interface：`http://<INSTANCE_IP>:8888/a2a/rest`。
@@ -8,6 +9,46 @@
 
 `additionalInterfaces` 仅包含 HTTP+JSON 和 gRPC 两项。JSON-RPC 主接口由 `url` 和
 `preferredTransport: JSONRPC` 表示。没有额外的 JSON-RPC 路径别名，也没有独立的多接口 demo 模块。
+
+## 与 AgentScope Starter 的接入方式
+
+示例使用官方 `agentscope-a2a-spring-boot-starter` 装配唯一的 `AgentScopeA2aServer`、
+JSON-RPC 控制器、请求处理链和注册监听器。应用无需手工创建 server，也无需开启 Bean 覆盖。
+
+- `TransportConfiguration` 只提供 HTTP+JSON、gRPC 的 `CustomTransportProperties`，
+  WrapperBuilder 通过官方 SPI 加载；Starter 将同一个请求处理器传给各个传输。
+- `application.yml` 的 `card.url`、`card.additional-interfaces` 使用官方卡片配置绑定，
+  可通过外部配置覆盖。修改卡片 URL 只改变服务公告地址，不会增加监听接口。
+- `A2aInstanceIpEnvironmentPostProcessor` 是本示例用于填写 `${a2a.instance-ip}` 的
+  Spring Boot 环境扩展，加载 YAML 后、绑定卡片配置前调用 AgentScope 的 IP 探测工具。
+  它不修改 `server.address`，也不构建 server；该占位属性是本示例约定，不是 AgentScope 官方属性。
+- `A2aRestController` 和 `GrpcServerLifecycle` 为额外协议提供实际监听入口。
+  `agentscope.a2a.server.enabled=false` 会关闭 A2A server 及这两个入口。
+
+只需要 JSON-RPC 和北极星注册的应用，可直接使用两个 Starter，省去额外传输适配和上述 IP 占位扩展。
+需要本示例两个 additional interface 时，复用传输适配和环境扩展，并保留 YAML 的接口声明。
+
+```yaml
+agentscope:
+  a2a:
+    server:
+      card:
+        preferred-transport: JSONRPC
+        url: "http://${a2a.instance-ip}:${server.port}${server.servlet.context-path:}/"
+        additional-interfaces:
+          - transport: HTTP+JSON
+            url: "http://${a2a.instance-ip}:${server.port}${server.servlet.context-path:}${agentscope.a2a.server.rest.path}"
+          - transport: GRPC
+            url: "http://${a2a.instance-ip}:${agentscope.a2a.server.grpc.port}"
+      rest:
+        path: /a2a/rest
+      grpc:
+        port: 8889
+```
+
+`rest.path` 是相对于 Servlet context path 的实际路由，默认 `/a2a/rest`；调整该属性会同时更新
+Controller 路由和 YAML 中的默认 HTTP+JSON URL。gRPC 使用单独监听端口，不带 Servlet context path。
+`rest.path`、`grpc.port` 是本示例提供的配置。
 
 ## 构建
 
@@ -27,7 +68,8 @@ agentscope-extensions-polaris-example/a2a/a2a-server-spring-boot/target/agentsco
 
 无需配置实例 IP。应用复用 AgentScope 的网络工具，自动获取本机非回环 IPv4 地址，
 用于 JSON-RPC、HTTP+JSON、gRPC 的 AgentCard URL 和北极星注册 host。HTTP 和 gRPC
-默认监听所有网卡；`server.address` 仅用于限制监听地址，不用于生成上报 IP。
+默认监听所有网卡。默认无需填写 `server.address`；若显式配置该项，沿用 AgentScope
+1.0.12 Starter 的语义，同时用于监听和部署上报地址。不要把 `0.0.0.0` 作为上报地址。
 
 ```bash
 export A2A_SERVER_PORT='8888'
@@ -157,6 +199,7 @@ mvn -pl agentscope-extensions-polaris-example/a2a/a2a-server-spring-boot -am tes
 `MultiTransportIntegrationTest` 启动真实 HTTP/gRPC 服务，验证三种协议的普通和流式请求、跨协议任务查询、
 客户端通过自动生成的实例地址调用三种协议、从 additionalInterfaces 选择 HTTP+JSON/gRPC、
 错误请求和监听端口释放。
-`TransportRegistrationTest` 使用模拟 Polaris API 和固定的自动探测 IP，验证无需配置
-`server.address`，或者把它设为 `0.0.0.0` / `127.0.0.1` 时，均上报自动探测的实例 IP；
-同时验证只有两个 additional interface、只注册一个实例，以及元数据和完整卡片的注册发现。真实北极星后端注册与注销需要在测试环境复测。
+`TransportRegistrationTest` 使用模拟 Polaris API，验证 server 的 Bean 来自官方 Starter、
+未配置地址时自动探测 IP、显式地址遵循 Starter 的部署语义、外部卡片配置生效、
+关闭 A2A 开关时不创建端点，以及默认端口 1 和完整卡片的注册发现。
+网络测试同时覆盖 Servlet context path 和自定义 REST 路径。真实北极星后端注册与注销需要在测试环境复测。

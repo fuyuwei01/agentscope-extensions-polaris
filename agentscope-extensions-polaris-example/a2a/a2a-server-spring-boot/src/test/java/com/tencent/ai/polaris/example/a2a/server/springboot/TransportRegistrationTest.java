@@ -29,12 +29,16 @@ import com.tencent.polaris.api.rpc.InstancesResponse;
 import io.a2a.spec.AgentCard;
 import io.agentscope.core.a2a.server.AgentScopeA2aServer;
 import io.agentscope.core.a2a.server.utils.NetworkUtils;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
+import io.agentscope.spring.boot.a2a.AgentscopeA2aAutoConfiguration;
+import io.agentscope.spring.boot.a2a.properties.A2aAgentCardProperties;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -53,12 +57,14 @@ class TransportRegistrationTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = {"0.0.0.0", "127.0.0.1"})
-    void automaticInstanceIpSurvivesRegistrationAndDiscovery(String bindAddress) {
+    @ValueSource(strings = {"127.0.0.1"})
+    void starterDeploymentIpSurvivesRegistrationAndDiscovery(String bindAddress) {
         try (MockedStatic<NetworkUtils> network = mockStatic(NetworkUtils.class)) {
             network.when(NetworkUtils::getLocalIpAddress).thenReturn("10.20.30.40");
             WebApplicationContextRunner runner = new WebApplicationContextRunner()
                     .withInitializer(new ConfigDataApplicationContextInitializer())
+                    .withInitializer(context -> new A2aInstanceIpEnvironmentPostProcessor()
+                            .postProcessEnvironment(context.getEnvironment(), new SpringApplication()))
                     .withUserConfiguration(PolarisA2aServerSpringBootExample.class,
                             PolarisTestConfiguration.class)
                     .withPropertyValues("server.port=18890",
@@ -70,11 +76,16 @@ class TransportRegistrationTest {
             }
             runner.run(application -> {
                 assertThat(application).hasNotFailed();
+                assertThat(application).hasSingleBean(AgentScopeA2aServer.class);
+                assertThat(application.getSourceApplicationContext().getBeanFactory()
+                        .getBeanDefinition("agentScopeA2aServer").getFactoryBeanName())
+                        .isEqualTo(AgentscopeA2aAutoConfiguration.class.getName());
                 AgentScopeA2aServer server = application.getBean(AgentScopeA2aServer.class);
                 AgentCard card = server.getAgentCard();
-                List<String> urls = List.of("http://10.20.30.40:18890/a2a/rest",
-                        "http://10.20.30.40:18891");
-                assertThat(card.url()).isEqualTo("http://10.20.30.40:18890/");
+                String host = bindAddress == null ? "10.20.30.40" : bindAddress;
+                List<String> urls = List.of("http://" + host + ":18890/a2a/rest",
+                        "http://" + host + ":18891");
+                assertThat(card.url()).isEqualTo("http://" + host + ":18890/");
                 assertThat(card.preferredTransport()).isEqualTo("JSONRPC");
                 assertThat(card.additionalInterfaces()).extracting("url").containsExactlyElementsOf(urls);
                 assertThat(card.additionalInterfaces()).extracting("transport")
@@ -85,7 +96,7 @@ class TransportRegistrationTest {
                 ArgumentCaptor<InstanceRegisterRequest> captor = ArgumentCaptor.forClass(InstanceRegisterRequest.class);
                 verify(context.providerAPI()).registerInstance(captor.capture());
                 InstanceRegisterRequest request = captor.getValue();
-                assertThat(request.getHost()).isEqualTo("10.20.30.40");
+                assertThat(request.getHost()).isEqualTo(host);
                 assertThat(request.getPort()).isEqualTo(bindAddress == null ? 1 : 19090);
                 assertThat(request.getProtocol()).isEmpty();
                 assertThat(request.getMetadata().keySet())
@@ -105,6 +116,52 @@ class TransportRegistrationTest {
                         .isEqualTo(card);
             });
         }
+    }
+
+    @Test
+    void starterHonorsConfiguredCardUrlsAndMetadata() {
+        new WebApplicationContextRunner()
+                .withInitializer(new ConfigDataApplicationContextInitializer())
+                .withInitializer(context -> new A2aInstanceIpEnvironmentPostProcessor()
+                        .postProcessEnvironment(context.getEnvironment(), new SpringApplication()))
+                .withUserConfiguration(PolarisA2aServerSpringBootExample.class, PolarisTestConfiguration.class)
+                .withPropertyValues("server.address=127.0.0.1",
+                        "agentscope.model.provider=echo-last-user-input", "agentscope.polaris.skill.enabled=false",
+                        "agentscope.a2a.server.card.url=https://agents.example.com/rpc",
+                        "agentscope.a2a.server.card.additional-interfaces[0].transport=HTTP+JSON",
+                        "agentscope.a2a.server.card.additional-interfaces[0].url=https://agents.example.com/rest",
+                        "agentscope.a2a.server.card.additional-interfaces[1].transport=GRPC",
+                        "agentscope.a2a.server.card.additional-interfaces[1].url=https://agents.example.com:443",
+                        "agentscope.a2a.server.card.description=Configured description",
+                        "agentscope.a2a.server.card.version=2.3.4")
+                .run(application -> {
+                    assertThat(application).hasNotFailed();
+                    assertThat(application).hasSingleBean(AgentScopeA2aServer.class);
+                    AgentCard card = application.getBean(AgentScopeA2aServer.class).getAgentCard();
+                    assertThat(card.url()).isEqualTo("https://agents.example.com/rpc");
+                    assertThat(card.additionalInterfaces()).extracting("url").containsExactly(
+                            "https://agents.example.com/rest", "https://agents.example.com:443");
+                    assertThat(card.description()).isEqualTo("Configured description");
+                    assertThat(card.version()).isEqualTo("2.3.4");
+                    assertThat(card.additionalInterfaces()).isEqualTo(
+                            application.getBean(A2aAgentCardProperties.class).getAdditionalInterfaces());
+                });
+    }
+
+    @Test
+    void disablingA2aServerDisablesExampleEndpoints() {
+        new WebApplicationContextRunner()
+                .withInitializer(new ConfigDataApplicationContextInitializer())
+                .withUserConfiguration(PolarisA2aServerSpringBootExample.class, PolarisTestConfiguration.class)
+                .withPropertyValues("agentscope.a2a.server.enabled=false",
+                        "agentscope.model.provider=echo-last-user-input", "agentscope.polaris.skill.enabled=false")
+                .run(application -> {
+                    assertThat(application).hasNotFailed();
+                    assertThat(application).doesNotHaveBean(AgentScopeA2aServer.class);
+                    assertThat(application).doesNotHaveBean(A2aRestController.class);
+                    assertThat(application).doesNotHaveBean(GrpcServerLifecycle.class);
+                    assertThat(application).doesNotHaveBean(TransportConfiguration.class);
+                });
     }
 
     @TestConfiguration(proxyBeanMethods = false)

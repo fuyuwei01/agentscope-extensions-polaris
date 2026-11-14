@@ -43,7 +43,8 @@ import io.a2a.spec.TextPart;
 import io.a2a.util.Utils;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
@@ -66,8 +67,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 /** Real HTTP and gRPC requests against the Spring Boot application with an offline model. */
 class MultiTransportIntegrationTest {
 
-    @Test
-    void allAdvertisedInterfacesHandleMessagesAndShareTasks() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"", "/agent"})
+    void allAdvertisedInterfacesHandleMessagesAndShareTasks(String contextPath) throws Exception {
         int httpPort = availablePort();
         int grpcPort = availablePort();
         while (grpcPort == httpPort) {
@@ -75,10 +77,11 @@ class MultiTransportIntegrationTest {
         }
         SpringApplication app = new SpringApplication(PolarisA2aServerSpringBootExample.class);
         try (ConfigurableApplicationContext ignored = app.run(
-                "--server.port=" + httpPort,
+                "--server.port=" + httpPort, "--server.servlet.context-path=" + contextPath,
+                "--agentscope.a2a.server.rest.path=" + (contextPath.isEmpty() ? "/a2a/rest" : "/http"),
                 "--agentscope.a2a.server.grpc.port=" + grpcPort, "--agentscope.polaris.enabled=false",
                 "--agentscope.model.provider=echo-last-user-input", "--agentscope.polaris.skill.enabled=false")) {
-            verifyServer("http://127.0.0.1:" + httpPort, grpcPort);
+            verifyServer("http://127.0.0.1:" + httpPort + contextPath, grpcPort);
         }
         // Context shutdown releases both listening ports.
         try (ServerSocket http = bindReleasedPort(httpPort); ServerSocket grpc = bindReleasedPort(grpcPort)) {
@@ -104,6 +107,7 @@ class MultiTransportIntegrationTest {
                 .filter(i -> i.transport().equals("GRPC")).findFirst().orElseThrow();
         assertThat(URI.create(grpcInterface.url()).getPort()).isEqualTo(grpcPort);
 
+        assertThat(URI.create(card.url()).getPath()).isEqualTo(URI.create(baseUrl).getPath() + "/");
         String instanceIp = URI.create(card.url()).getHost();
         assertThat(URI.create(restInterface.url()).getHost()).isEqualTo(instanceIp);
         assertThat(URI.create(grpcInterface.url()).getHost()).isEqualTo(instanceIp);

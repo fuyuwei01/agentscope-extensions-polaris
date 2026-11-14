@@ -21,6 +21,7 @@ import io.a2a.transport.rest.handler.RestHandler.HTTPRestResponse;
 import io.a2a.transport.rest.handler.RestHandler.HTTPRestStreamingResponse;
 import io.agentscope.core.a2a.server.AgentScopeA2aServer;
 import org.reactivestreams.FlowAdapters;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
@@ -39,7 +40,8 @@ import java.util.Map;
 
 /** A2A 0.3 HTTP+JSON routes. Payloads use the SDK's protobuf JSON mapping. */
 @RestController
-@RequestMapping("/a2a/rest")
+@ConditionalOnProperty(prefix = "agentscope.a2a.server", name = "enabled", havingValue = "true", matchIfMissing = true)
+@RequestMapping("${agentscope.a2a.server.rest.path:/a2a/rest}")
 public class A2aRestController {
 
     private final RestTransportWrapper wrapper;
