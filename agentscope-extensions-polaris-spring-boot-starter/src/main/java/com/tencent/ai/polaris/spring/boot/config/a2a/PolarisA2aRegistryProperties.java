@@ -29,7 +29,7 @@ public class PolarisA2aRegistryProperties {
     /** Heartbeat ttl in seconds (autoHeartbeat is always on). Default {@code 5}. */
     private int ttl = 5;
 
-    /** Polaris registration port, independent of the A2A transport port. Default {@code 0}. */
+    /** Polaris registration port, independent of the A2A transport port. Default {@code 1}. */
     private int port = PolarisA2aConstants.DEFAULT_REGISTRATION_PORT;
 
     public boolean isEnabled() {

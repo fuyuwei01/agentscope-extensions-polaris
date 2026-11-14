@@ -63,10 +63,10 @@ class TransportRegistrationTest {
                             PolarisTestConfiguration.class)
                     .withPropertyValues("server.port=18890",
                             "agentscope.a2a.server.grpc.port=18891",
-                            "agentscope.model.provider=echo-last-user-input", "agentscope.polaris.skill.enabled=false",
-                            "agentscope.polaris.a2a.registry.port=19090");
+                            "agentscope.model.provider=echo-last-user-input", "agentscope.polaris.skill.enabled=false");
             if (bindAddress != null) {
-                runner = runner.withPropertyValues("server.address=" + bindAddress);
+                runner = runner.withPropertyValues("server.address=" + bindAddress,
+                        "agentscope.polaris.a2a.registry.port=19090");
             }
             runner.run(application -> {
                 assertThat(application).hasNotFailed();
@@ -86,7 +86,7 @@ class TransportRegistrationTest {
                 verify(context.providerAPI()).registerInstance(captor.capture());
                 InstanceRegisterRequest request = captor.getValue();
                 assertThat(request.getHost()).isEqualTo("10.20.30.40");
-                assertThat(request.getPort()).isEqualTo(19090);
+                assertThat(request.getPort()).isEqualTo(bindAddress == null ? 1 : 19090);
                 assertThat(request.getProtocol()).isEmpty();
                 assertThat(request.getMetadata().keySet())
                         .isEqualTo(Set.of("ai-agent-name", "ai-agent-card", "ai-a2a-version"));

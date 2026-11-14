@@ -48,7 +48,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *
  * <p>Service mapping: {@link AgentCard#name()} is the Polaris service name; each
  * distinct host in the exported {@link TransportProperties} becomes one Polaris instance.
- * The registration port defaults to {@code 0} and the protocol is empty; A2A endpoint URLs
+ * The registration port defaults to {@code 1} and the protocol is empty; A2A endpoint URLs
  * remain in the AgentCard. Discovery
  * ({@link com.tencent.ai.polaris.a2a.discovery.PolarisAgentCardResolver}) rebuilds the card
  * from instance metadata.
@@ -305,7 +305,7 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
             return this;
         }
 
-        /** Polaris registration port, independent of transport ports; {@code 0} by default. */
+        /** Polaris registration port, independent of transport ports; {@code 1} by default. */
         public Builder port(int port) {
             this.port = port;
             return this;

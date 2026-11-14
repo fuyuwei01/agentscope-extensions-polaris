@@ -41,7 +41,7 @@ agentscope-extensions-polaris (root)
 
 ## A2A 注册
 
-`PolarisAgentRegistry` 默认以空协议和端口 `0` 向北极星注册每个不同的 transport host。
+`PolarisAgentRegistry` 默认以空协议和端口 `1` 向北极星注册每个不同的 transport host。
 同一 host 上的多个 transport 共用一个注册实例。客户端访问的 A2A 端点 URL 保留在 AgentCard 中。
 
 实例元数据包含 `ai-agent-name`、保存完整 AgentCard JSON 的 `ai-agent-card`，以及表示 A2A 协议版本的
@@ -56,11 +56,11 @@ agentscope:
     address: 127.0.0.1:8091
     a2a:
       registry:
-        port: 18080        # 可选，默认 0
+        port: 18080        # 可选，默认 1
 ```
 
 纯 Java 用法：`PolarisAgentRegistry.builder(context).port(18080).build()`。
-原有的纯 Java 和 Spring Boot A2A server 示例都支持 `POLARIS_REGISTRY_PORT` 环境变量，默认 `0`。该设置用于注册和注销；
+原有的纯 Java 和 Spring Boot A2A server 示例都支持 `POLARIS_REGISTRY_PORT` 环境变量，默认 `1`。该设置用于注册和注销；
 A2A server 的监听端口需要单独配置。
 
 ### Spring Boot 服务端协议

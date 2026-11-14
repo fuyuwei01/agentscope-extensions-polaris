@@ -109,7 +109,7 @@ class PolarisAgentRegistryTest {
         assertEquals(NAMESPACE, first.getNamespace());
         assertEquals("weather-agent", first.getService());
         assertEquals("10.0.0.1", first.getHost());
-        assertEquals(0, first.getPort());
+        assertEquals(1, first.getPort());
         assertEquals("1.0.0", first.getVersion());
         assertEquals("", first.getProtocol());
         assertTrue(first.isAutoHeartbeat());
@@ -122,7 +122,7 @@ class PolarisAgentRegistryTest {
 
         InstanceRegisterRequest second = requests.get(1);
         assertEquals("10.0.0.2", second.getHost());
-        assertEquals(0, second.getPort());
+        assertEquals(1, second.getPort());
         assertEquals("", second.getProtocol());
         assertEquals(first.getMetadata(), second.getMetadata());
 
@@ -160,13 +160,13 @@ class PolarisAgentRegistryTest {
                 buildTransport("HTTP+JSON", "h", 8443, true)));
 
         verify(providerAPI).registerInstance(registerCaptor.capture());
-        assertEquals(0, registerCaptor.getValue().getPort());
+        assertEquals(1, registerCaptor.getValue().getPort());
         assertEquals(1, registry.getRegistered().size());
 
         registry.close();
 
         verify(providerAPI).deRegister(deregisterCaptor.capture());
-        assertEquals(0, deregisterCaptor.getValue().getPort());
+        assertEquals(1, deregisterCaptor.getValue().getPort());
         assertTrue(registry.getRegistered().isEmpty());
     }
 
@@ -206,7 +206,7 @@ class PolarisAgentRegistryTest {
         registry.register(buildCard("echo", "1.0.0"), List.of(transport));
 
         verify(providerAPI).registerInstance(registerCaptor.capture());
-        assertEquals(0, registerCaptor.getValue().getPort());
+        assertEquals(1, registerCaptor.getValue().getPort());
     }
 
     @Test
@@ -328,7 +328,7 @@ class PolarisAgentRegistryTest {
         assertEquals(NAMESPACE, req.getNamespace());
         assertEquals("echo", req.getService());
         assertEquals("h", req.getHost());
-        assertEquals(0, req.getPort());
+        assertEquals(1, req.getPort());
         assertEquals("inst-x", req.getInstanceID());
     }
 

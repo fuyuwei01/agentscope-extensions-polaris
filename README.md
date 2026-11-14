@@ -42,7 +42,7 @@ agentscope-extensions-polaris (root)
 ## A2A Registration
 
 `PolarisAgentRegistry` registers each distinct transport host with an empty protocol and a
-Polaris instance port of `0` by default. Transports on the same host share one registration.
+Polaris instance port of `1` by default. Transports on the same host share one registration.
 The AgentCard retains the A2A endpoint URLs used by clients.
 
 Instance metadata contains `ai-agent-name`, the full AgentCard JSON in `ai-agent-card`, and
@@ -57,11 +57,11 @@ agentscope:
     address: 127.0.0.1:8091
     a2a:
       registry:
-        port: 18080        # optional; defaults to 0
+        port: 18080        # optional; defaults to 1
 ```
 
 For pure Java, use `PolarisAgentRegistry.builder(context).port(18080).build()`.
-The original plain Java and Spring Boot A2A server examples accept `POLARIS_REGISTRY_PORT` (default `0`). This setting affects
+The original plain Java and Spring Boot A2A server examples accept `POLARIS_REGISTRY_PORT` (default `1`). This setting affects
 registration and deregistration; configure the A2A server's listen port separately.
 
 ### Spring Boot Server Transports

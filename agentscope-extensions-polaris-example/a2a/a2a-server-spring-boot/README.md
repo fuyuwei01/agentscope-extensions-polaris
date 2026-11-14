@@ -36,7 +36,6 @@ export A2A_AGENT_NAME='polaris-a2a-example-agent'
 export POLARIS_DISCOVERY_ADDRESS='<POLARIS_HOST>:8091'
 export POLARIS_NAMESPACE='default'
 export POLARIS_TOKEN=''
-export POLARIS_REGISTRY_PORT='18080'
 export A2A_MODEL_PROVIDER='echo-last-user-input'
 
 java -jar agentscope-extensions-polaris-example-a2a-server-spring-boot-0.1.0-RC1.jar \
@@ -48,7 +47,7 @@ HTTP 监听端口由 `A2A_SERVER_PORT` 设置，默认 `8888`。gRPC 监听端�
 应用先启动 HTTP 和 gRPC，再注册 AgentCard；退出时关闭两个监听服务并注销实例。
 
 北极星注册端口由 `POLARIS_REGISTRY_PORT` 设置，与实际调用端口独立，应用不会为它启动监听。
-注册默认值仍是 `0`；当前 Polaris Java SDK `2.2.0.0-RC1` 会拒绝 `0`，测试时必须配置非零值。
+注册默认值是 `1`，无需显式配置；如需覆盖，可设置 `POLARIS_REGISTRY_PORT`，例如 `18080`。
 
 原示例默认模型仍是 `openai`，Skill 加载默认开启。上述命令选择离线回显模型并关闭 Skill 加载，
 不需要 LLM API Key 或 Skill 服务。使用真实模型时按 `application.yml` 配置模型名和鉴权参数。
