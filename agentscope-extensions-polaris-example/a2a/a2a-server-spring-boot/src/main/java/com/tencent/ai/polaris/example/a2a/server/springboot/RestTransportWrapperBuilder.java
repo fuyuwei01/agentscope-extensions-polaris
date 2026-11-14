@@ -38,4 +38,3 @@ public class RestTransportWrapperBuilder implements TransportWrapperBuilder<Rest
         return new RestTransportWrapper(new RestHandler(card, handler, executor));
     }
 }
-

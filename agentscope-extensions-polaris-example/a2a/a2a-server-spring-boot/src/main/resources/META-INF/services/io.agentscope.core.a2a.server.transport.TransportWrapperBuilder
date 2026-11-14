@@ -1,3 +1,2 @@
 com.tencent.ai.polaris.example.a2a.server.springboot.RestTransportWrapperBuilder
 com.tencent.ai.polaris.example.a2a.server.springboot.GrpcTransportWrapperBuilder
-

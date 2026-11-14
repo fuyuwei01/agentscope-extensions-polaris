@@ -37,4 +37,3 @@ public class GrpcTransportWrapperBuilder implements TransportWrapperBuilder<Grpc
         return new GrpcTransportWrapper(card, handler, executor);
     }
 }
-

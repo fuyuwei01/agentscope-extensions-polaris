@@ -120,4 +120,3 @@ public class A2aRestController {
                 .contentType(MediaType.parseMediaType(response.getContentType())).body(response.getBody());
     }
 }
-

@@ -62,4 +62,3 @@ public class RestTransportWrapper implements TransportWrapper<String, RestHandle
         return streaming ? handler.sendStreamingMessage(body, context) : handler.sendMessage(body, context);
     }
 }
-
