@@ -28,20 +28,45 @@
 
     <artifactId>agentscope-extensions-polaris-example-a2a-server-spring-boot</artifactId>
     <name>AgentScope Extensions Polaris Example A2A Server (Spring Boot)</name>
-    <description>Hosts an A2A agent and registers it to Polaris, assembled by Spring Boot starters</description>
+    <description>Hosts one A2A agent over JSON-RPC, HTTP+JSON and gRPC and registers its card to Polaris</description>
 
     <properties>
         <spring.boot.version>4.0.3</spring.boot.version>
+        <a2a.sdk.version>0.3.3.Final</a2a.sdk.version>
+        <grpc.version>1.73.0</grpc.version>
+        <protobuf.version>4.31.1</protobuf.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- Align the gRPC runtime with the SDK's generated stubs, including Polaris's
+                 transitive gRPC dependencies in this executable demo. -->
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-bom</artifactId>
+                <version>${grpc.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-bom</artifactId>
+                <version>${protobuf.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
                 <version>${spring.boot.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-test</artifactId>
+                <version>${spring.boot.version}</version>
+                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -97,6 +122,42 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-transport-rest</artifactId>
+            <version>${a2a.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-transport-grpc</artifactId>
+            <version>${a2a.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-services</artifactId>
+        </dependency>
+        <!-- SDK clients verify the additional protocols in integration tests. -->
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-client-transport-rest</artifactId>
+            <version>${a2a.sdk.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-client-transport-grpc</artifactId>
+            <version>${a2a.sdk.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

@@ -14,7 +14,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package com.tencent.ai.polaris.example.a2a.server.interfaces;
+package com.tencent.ai.polaris.example.a2a.server.springboot;
 
 import com.tencent.ai.polaris.a2a.discovery.PolarisAgentCardResolver;
 import com.tencent.ai.polaris.a2a.util.AgentCardCodec;
@@ -44,26 +44,29 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class AdditionalInterfacesRegistrationTest {
+class TransportRegistrationTest {
 
     @Test
     void configuredInterfacesSurviveRegistrationAndDiscovery() {
         new WebApplicationContextRunner()
                 .withInitializer(new ConfigDataApplicationContextInitializer())
-                .withUserConfiguration(PolarisA2aAdditionalInterfacesSpringBootExample.class,
+                .withUserConfiguration(PolarisA2aServerSpringBootExample.class,
                         PolarisTestConfiguration.class)
                 .withPropertyValues("server.address=127.0.0.1", "server.port=18890",
+                        "agentscope.a2a.server.grpc.port=18891",
+                        "agentscope.model.provider=echo-last-user-input", "agentscope.polaris.skill.enabled=false",
                         "agentscope.polaris.a2a.registry.port=19090")
                 .run(application -> {
                     assertThat(application).hasNotFailed();
                     AgentScopeA2aServer server = application.getBean(AgentScopeA2aServer.class);
                     AgentCard card = server.getAgentCard();
-                    List<String> urls = List.of("http://127.0.0.1:18890/",
-                            "http://127.0.0.1:18890/a2a/jsonrpc", "http://127.0.0.1:18890/a2a/internal",
-                            "http://127.0.0.1:18890/a2a/external");
-                    assertThat(card.url()).isEqualTo(urls.get(0));
+                    List<String> urls = List.of("http://127.0.0.1:18890/a2a/rest",
+                            "http://127.0.0.1:18891");
+                    assertThat(card.url()).isEqualTo("http://127.0.0.1:18890/");
+                    assertThat(card.preferredTransport()).isEqualTo("JSONRPC");
                     assertThat(card.additionalInterfaces()).extracting("url").containsExactlyElementsOf(urls);
-                    assertThat(card.additionalInterfaces()).extracting("transport").containsOnly("JSONRPC");
+                    assertThat(card.additionalInterfaces()).extracting("transport")
+                            .containsExactly("HTTP+JSON", "GRPC");
 
                     PolarisContextManager context = application.getBean(PolarisContextManager.class);
                     server.postEndpointReady();

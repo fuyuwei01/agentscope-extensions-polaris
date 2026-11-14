@@ -32,6 +32,10 @@ import org.springframework.context.annotation.Bean;
  * contributed by our own {@code agentscope-extensions-polaris-spring-boot-starter}). On {@code ApplicationReadyEvent}
  * the server registers the agent card + transport to Polaris.
  *
+ * <p>The main JSON-RPC interface listens on the HTTP port (default 8888). The same agent
+ * is exposed through HTTP+JSON at {@code /a2a/rest} and gRPC on a separate port (default 8889).
+ * Both are declared in {@code additionalInterfaces} and share the request handler and task store.
+ *
  * <p>Configure via {@code src/main/resources/application.yml} (or env vars), then run:
  * <pre>{@code
  * # fetch the agent card
