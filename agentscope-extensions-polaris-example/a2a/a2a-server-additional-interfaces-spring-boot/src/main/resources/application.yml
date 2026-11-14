@@ -1,0 +1,59 @@
+server:
+  # Set A2A_SERVER_HOST to a local IP reachable by clients when running on another machine.
+  address: ${A2A_SERVER_HOST:127.0.0.1}
+  port: ${A2A_SERVER_PORT:8890}
+
+spring:
+  main:
+    banner-mode: off
+  mvc:
+    async:
+      request-timeout: ${A2A_STREAM_TIMEOUT:10m}
+
+agentscope:
+  model:
+    provider: ${A2A_MODEL_PROVIDER:echo-last-user-input}
+  openai:
+    api-key: ${TOKEN_HUB_API_KEY:}
+    base-url: ${TOKEN_HUB_BASE_URL:https://api.openai.com/v1}
+    model-name: ${OPENAI_MODEL:}
+  agent:
+    enabled: true
+    name: ${A2A_AGENT_NAME:polaris-a2a-additional-interfaces-agent}
+    sys-prompt: Echo the latest user message.
+    max-iters: 3
+  a2a:
+    server:
+      enabled: true
+      card:
+        name: ${agentscope.agent.name}
+        description: A2A 0.3 agent with a main JSON-RPC interface and three additional paths.
+        version: "1.0.0"
+        preferred-transport: JSONRPC
+        url: "http://${server.address}:${server.port}/"
+        # Every advertised URL is served by this application. All interfaces use JSON-RPC.
+        additional-interfaces:
+          - transport: JSONRPC
+            url: "http://${server.address}:${server.port}/"
+          - transport: JSONRPC
+            url: "http://${server.address}:${server.port}/a2a/jsonrpc"
+          - transport: JSONRPC
+            url: "http://${server.address}:${server.port}/a2a/internal"
+          - transport: JSONRPC
+            url: "http://${server.address}:${server.port}/a2a/external"
+  polaris:
+    enabled: ${POLARIS_ENABLED:true}
+    address: ${POLARIS_DISCOVERY_ADDRESS:127.0.0.1:8091}
+    namespace: ${POLARIS_NAMESPACE:default}
+    token: ${POLARIS_TOKEN:}
+    skill:
+      enabled: false
+    a2a:
+      enabled: true
+      registry:
+        enabled: true
+        ttl: 5
+        # Current Polaris Java rejects registration port 0. Endpoint URLs use server.port.
+        port: ${POLARIS_REGISTRY_PORT:18080}
+      discovery:
+        enabled: true

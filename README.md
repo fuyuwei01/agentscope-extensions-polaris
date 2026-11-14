@@ -61,8 +61,16 @@ agentscope:
 ```
 
 For pure Java, use `PolarisAgentRegistry.builder(context).port(18080).build()`.
-Both A2A server examples accept `POLARIS_REGISTRY_PORT` (default `0`). This setting affects
+The original plain Java and Spring Boot A2A server examples accept `POLARIS_REGISTRY_PORT` (default `0`). This setting affects
 registration and deregistration; configure the A2A server's listen port separately.
+
+### Spring Boot Example with Additional Interfaces
+
+[`a2a-server-additional-interfaces-spring-boot`](agentscope-extensions-polaris-example/a2a/a2a-server-additional-interfaces-spring-boot)
+declares the main interface and three additional JSON-RPC paths in one AgentCard.
+All four URLs are served on the same IP and port, and Polaris stores the complete card on one instance.
+The default model echoes user messages offline. HTTP listens on `8890`, and the registration port defaults
+to `18080`. See the example README for build, run, and verification commands.
 
 ## Skill Usage
 

@@ -60,8 +60,15 @@ agentscope:
 ```
 
 纯 Java 用法：`PolarisAgentRegistry.builder(context).port(18080).build()`。
-两个 A2A server 示例都支持 `POLARIS_REGISTRY_PORT` 环境变量，默认 `0`。该设置用于注册和注销；
+原有的纯 Java 和 Spring Boot A2A server 示例都支持 `POLARIS_REGISTRY_PORT` 环境变量，默认 `0`。该设置用于注册和注销；
 A2A server 的监听端口需要单独配置。
+
+### 多接口 Spring Boot 示例
+
+[`a2a-server-additional-interfaces-spring-boot`](agentscope-extensions-polaris-example/a2a/a2a-server-additional-interfaces-spring-boot)
+在一个 AgentCard 的 `additionalInterfaces` 中声明主接口和三个附加 JSON-RPC 路径。
+四个 URL 都可调用，共用同一 IP 和端口；注册时完整卡片保存在一个北极星实例中。
+默认使用离线回显模型，HTTP 端口为 `8890`，注册端口为 `18080`。构建、运行和验证步骤见示例 README。
 
 ## Skill 用法
 
