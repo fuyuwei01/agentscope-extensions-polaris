@@ -211,7 +211,14 @@ class PolarisMcpHttpIntegrationTest {
             if ("STREAMABLE".equals(mode)) assertFalse(sessions.isEmpty());
             if ("STATELESS".equals(mode)) assertTrue(sessions.isEmpty());
             if ("STREAMABLE".equals(mode)) assertEquals(1, sessions.stream().distinct().count());
-            client.recycleIdle(Duration.ZERO);
+            // block() can return before doFinally releases the in-flight call count.
+            // Retry idle recycling until cleanup finishes; an unreleased call still fails the test.
+            long recycleDeadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
+            do {
+                client.recycleIdle(Duration.ZERO);
+                if (manager.subscriptionCount() == 0) break;
+                Thread.sleep(10);
+            } while (System.nanoTime() < recycleDeadline);
             assertEquals(0, manager.subscriptionCount());
             assertNotNull(
                     toolkit.callTool(
