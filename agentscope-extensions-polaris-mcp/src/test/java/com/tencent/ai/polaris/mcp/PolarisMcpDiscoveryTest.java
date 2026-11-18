@@ -708,4 +708,159 @@ class PolarisMcpDiscoveryTest {
             queryRelease.countDown();
         }
     }
+
+    @Test
+    void discoveryFailureUnsubscribesAndCanBeRetried() {
+        Registry registry = new Registry(instance("a", "mcp-streamable-http", null));
+        when(registry.consumer.getHealthyInstances(any()))
+                .thenThrow(new IllegalStateException("registry offline"));
+        try (var manager = new PolarisMcpServerManager(registry.consumer, "default");
+                var client =
+                        PolarisMcpClientBuilder.create("tools", manager)
+                                .clientFactory(endpoint -> new FakeClient(List.of(TOOL)))
+                                .build()) {
+            var error =
+                    assertThrows(PolarisMcpException.class, () -> client.initialize().block(WAIT));
+            assertEquals(PolarisMcpException.Reason.DISCOVERY, error.getReason());
+            assertEquals(0, manager.subscriptionCount());
+            verify(registry.consumer).unWatchService(any());
+            doAnswer(invocation -> Registry.response(registry.instances.get()))
+                    .when(registry.consumer)
+                    .getHealthyInstances(any());
+            client.callTool("lookup", Map.of()).block(WAIT);
+            assertTrue(client.isInitialized());
+            assertEquals(1, manager.subscriptionCount());
+        }
+    }
+
+    @Test
+    void invalidPublishedEndpointsDoNotCreateNativeClients() {
+        var invalid = instance("a", "http", "/mcp");
+        Registry registry = new Registry(invalid);
+        AtomicInteger factories = new AtomicInteger();
+        try (var manager = new PolarisMcpServerManager(registry.consumer, "default");
+                var client =
+                        PolarisMcpClientBuilder.create("tools", manager)
+                                .clientFactory(
+                                        endpoint -> {
+                                            factories.incrementAndGet();
+                                            return new FakeClient(List.of(TOOL));
+                                        })
+                                .build()) {
+            var error =
+                    assertThrows(PolarisMcpException.class, () -> client.initialize().block(WAIT));
+            assertEquals(PolarisMcpException.Reason.ENDPOINT, error.getReason());
+            assertEquals(0, factories.get());
+            assertNull(client.getSelectedEndpoint());
+        }
+    }
+
+    @Test
+    void rejectsMissingFactoriesToolListsAndDuplicateRemoteToolsWithoutLeakingClients() {
+        for (String failure : List.of("no-client", "no-tools", "duplicate-tools")) {
+            Registry registry = new Registry(instance("a", "mcp-streamable-http", null));
+            FakeClient fake =
+                    new FakeClient(List.of(TOOL)) {
+                        @Override
+                        public Mono<List<McpSchema.Tool>> listTools() {
+                            return "no-tools".equals(failure)
+                                    ? Mono.empty()
+                                    : Mono.just(List.of(TOOL, TOOL));
+                        }
+                    };
+            try (var manager = new PolarisMcpServerManager(registry.consumer, "default");
+                    var client =
+                            PolarisMcpClientBuilder.create("tools", manager)
+                                    .clientFactory(
+                                            endpoint -> "no-client".equals(failure) ? null : fake)
+                                    .build()) {
+                var error =
+                        assertThrows(
+                                PolarisMcpException.class, () -> client.initialize().block(WAIT));
+                assertEquals(
+                        "duplicate-tools".equals(failure)
+                                ? PolarisMcpException.Reason.INCOMPATIBLE_TOOLS
+                                : PolarisMcpException.Reason.INITIALIZATION,
+                        error.getReason());
+                assertFalse(client.isInitialized());
+                assertNull(client.getSelectedEndpoint());
+                assertEquals("no-client".equals(failure) ? 0 : 1, fake.closes.get());
+            }
+        }
+    }
+
+    @Test
+    void serviceCallReportingFailureDoesNotDiscardSuccessfulToolResults() {
+        Registry registry = new Registry(instance("a", "mcp-streamable-http", null));
+        doThrow(new IllegalStateException("reporting offline"))
+                .when(registry.consumer)
+                .updateServiceCallResult(any());
+        FakeClient fake = new FakeClient(List.of(TOOL));
+        try (var manager = new PolarisMcpServerManager(registry.consumer, "default");
+                var client =
+                        PolarisMcpClientBuilder.create("tools", manager)
+                                .clientFactory(endpoint -> fake)
+                                .build()) {
+            assertEquals(
+                    "ok",
+                    ((McpSchema.TextContent)
+                                    client.callTool("lookup", Map.of())
+                                            .block(WAIT)
+                                            .content()
+                                            .get(0))
+                            .text());
+            assertEquals("a", client.getSelectedEndpoint().id());
+            assertEquals(1, fake.calls.get());
+        }
+    }
+
+    @Test
+    void shutdownContinuesWhenUnwatchOrDelegateCloseFails() {
+        Registry registry = new Registry(instance("a", "mcp-streamable-http", null));
+        doThrow(new IllegalStateException("unsubscribe offline"))
+                .when(registry.consumer)
+                .unWatchService(any());
+        FakeClient fake =
+                new FakeClient(List.of(TOOL)) {
+                    @Override
+                    public void close() {
+                        closes.incrementAndGet();
+                        throw new IllegalStateException("transport close failed");
+                    }
+                };
+        try (var manager = new PolarisMcpServerManager(registry.consumer, "default")) {
+            var client =
+                    PolarisMcpClientBuilder.create("tools", manager)
+                            .clientFactory(endpoint -> fake)
+                            .build();
+            client.initialize().block(WAIT);
+            assertDoesNotThrow(client::close);
+            assertEquals(0, manager.subscriptionCount());
+            assertEquals(1, fake.closes.get());
+            client.close();
+            assertEquals(1, fake.closes.get());
+        }
+    }
+
+    @Test
+    void validatesReconciliationIntervalAndRejectsAcquisitionAfterShutdown() {
+        for (Duration interval : new Duration[] {null, Duration.ZERO, Duration.ofSeconds(-1)}) {
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () ->
+                            new PolarisMcpServerManager(
+                                    mock(ConsumerAPI.class), "default", interval));
+        }
+        try (var manager = new PolarisMcpServerManager(mock(ConsumerAPI.class), "default")) {
+            manager.close();
+            var error =
+                    assertThrows(
+                            PolarisMcpException.class,
+                            () ->
+                                    manager.acquire(
+                                            new PolarisMcpServiceKey("default", "tools"),
+                                            () -> {}));
+            assertEquals(PolarisMcpException.Reason.CLOSED, error.getReason());
+        }
+    }
 }

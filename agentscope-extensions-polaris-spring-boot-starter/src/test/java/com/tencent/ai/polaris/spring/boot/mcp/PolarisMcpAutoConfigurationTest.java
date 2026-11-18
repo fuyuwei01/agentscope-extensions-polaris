@@ -17,6 +17,7 @@
 package com.tencent.ai.polaris.spring.boot.mcp;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -543,6 +544,241 @@ class PolarisMcpAutoConfigurationTest {
             Toolkit toolkit = new Toolkit();
             org.junit.jupiter.api.Assertions.assertThrows(
                     IllegalStateException.class, () -> factory.bind(toolkit));
+            assertThat(toolkit.getToolNames()).isEmpty();
+            assertThat(manager.subscriptionCount()).isZero();
+        }
+    }
+
+    @Test
+    void bindsAllConsumerPoliciesAndRejectsInvalidSettingsBeforeDiscovery() {
+        new ApplicationContextRunner()
+                .withConfiguration(
+                        AutoConfigurations.of(AgentscopeMcpPolarisClientAutoConfiguration.class))
+                .withBean(PolarisContextManager.class, () -> context)
+                .withPropertyValues(
+                        "agentscope.polaris.mcp.discovery.attach-to-toolkit=true",
+                        "agentscope.polaris.mcp.discovery.toolkit-bean-name=businessToolkit",
+                        "agentscope.polaris.mcp.discovery.idle-timeout=2m",
+                        "agentscope.polaris.mcp.discovery.clients[0].service-name=tools",
+                        "agentscope.polaris.mcp.discovery.clients[0].name=business",
+                        "agentscope.polaris.mcp.discovery.clients[0].namespace=demo",
+                        "agentscope.polaris.mcp.discovery.clients[0].version=v2",
+                        "agentscope.polaris.mcp.discovery.clients[0].async-client=false",
+                        "agentscope.polaris.mcp.discovery.clients[0].request-timeout=4s",
+                        "agentscope.polaris.mcp.discovery.clients[0].initialization-timeout=3s",
+                        "agentscope.polaris.mcp.discovery.clients[0].default-scheme=https",
+                        "agentscope.polaris.mcp.discovery.clients[0].headers.Authorization=Bearer"
+                            + " test")
+                .run(
+                        ctx -> {
+                            assertThat(ctx).hasNotFailed();
+                            var properties = ctx.getBean(AgentScopePolarisMcpProperties.class);
+                            var discovery = properties.getDiscovery();
+                            assertThat(properties.isEnabled()).isTrue();
+                            assertThat(discovery.isEnabled()).isTrue();
+                            assertThat(discovery.isAttachToToolkit()).isTrue();
+                            assertThat(discovery.getToolkitBeanName()).isEqualTo("businessToolkit");
+                            assertThat(discovery.getIdleTimeout()).isEqualTo(Duration.ofMinutes(2));
+                            Client client = discovery.getClients().get(0);
+                            assertThat(client.getName()).isEqualTo("business");
+                            assertThat(client.getNamespace()).isEqualTo("demo");
+                            assertThat(client.getVersion()).isEqualTo("v2");
+                            assertThat(client.isAsyncClient()).isFalse();
+                            assertThat(client.getRequestTimeout()).hasSeconds(4);
+                            assertThat(client.getInitializationTimeout()).hasSeconds(3);
+                            assertThat(client.getDefaultScheme()).isEqualTo("https");
+                            assertThat(client.getHeaders())
+                                    .containsEntry("Authorization", "Bearer test");
+                            verify(context, never()).consumerAPI();
+                        });
+        for (String invalid :
+                List.of(
+                        "clients[0].service-name= ",
+                        "clients[0].request-timeout=0s",
+                        "clients[0].initialization-timeout=-1s",
+                        "clients[0].default-scheme=ftp",
+                        "idle-timeout=0s",
+                        "idle-timeout=-1s",
+                        "clients[1].service-name=tools")) {
+            new ApplicationContextRunner()
+                    .withConfiguration(
+                            AutoConfigurations.of(
+                                    AgentscopeMcpPolarisClientAutoConfiguration.class))
+                    .withBean(PolarisContextManager.class, () -> context)
+                    .withPropertyValues(
+                            "agentscope.polaris.mcp.discovery.clients[0].service-name=tools",
+                            "agentscope.polaris.mcp.discovery." + invalid)
+                    .run(ctx -> assertThat(ctx).hasFailed());
+        }
+        verify(context, never()).consumerAPI();
+    }
+
+    @Test
+    void autoConfigurationHonorsUserFactoriesAndDoesNotBindAnAmbiguousToolkit() {
+        try (PolarisMcpClientFactory factory = factory()) {
+            new ApplicationContextRunner()
+                    .withConfiguration(
+                            AutoConfigurations.of(
+                                    AgentscopeMcpPolarisClientAutoConfiguration.class))
+                    .withBean(PolarisContextManager.class, () -> context)
+                    .withBean(PolarisMcpClientFactory.class, () -> factory)
+                    .run(
+                            ctx ->
+                                    assertThat(ctx.getBean(PolarisMcpClientFactory.class))
+                                            .isSameAs(factory));
+        }
+        runner().withUserConfiguration(TwoToolkits.class)
+                .withPropertyValues("agentscope.polaris.mcp.discovery.attach-to-toolkit=true")
+                .run(ctx -> assertThat(ctx).hasFailed());
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class TwoToolkits {
+        @Bean
+        Toolkit agentscopeToolkit() {
+            return new Toolkit();
+        }
+
+        @Bean
+        Toolkit otherToolkit() {
+            return new Toolkit();
+        }
+    }
+
+    @Test
+    void emptyToolServersAndRepeatedBindingDoNotLeakInvisibleConnections() {
+        try (var manager = new PolarisMcpServerManager(consumer, "default")) {
+            var properties = new AgentScopePolarisMcpProperties();
+            Client config = new Client();
+            config.setServiceName("tools");
+            properties.getDiscovery().setClients(List.of(config));
+            try (var empty =
+                    new PolarisMcpClientFactory(manager, properties) {
+                        @Override
+                        protected PolarisMcpClientWrapper createClient(Client client) {
+                            return PolarisMcpClientBuilder.create("tools", manager)
+                                    .clientFactory(
+                                            endpoint ->
+                                                    new NativeClient() {
+                                                        @Override
+                                                        public Mono<List<McpSchema.Tool>>
+                                                                listTools() {
+                                                            return Mono.just(List.of());
+                                                        }
+
+                                                        @Override
+                                                        public void close() {
+                                                            closes.incrementAndGet();
+                                                        }
+                                                    })
+                                    .build();
+                        }
+                    }) {
+                Toolkit toolkit = new Toolkit();
+                empty.bind(toolkit);
+                assertThat(toolkit.getToolNames()).isEmpty();
+                assertThat(closes).hasValue(1);
+                assertThat(manager.subscriptionCount()).isZero();
+            }
+        }
+        try (var factory = factory()) {
+            Toolkit toolkit = new Toolkit();
+            factory.bind(toolkit);
+            factory.bind(toolkit);
+            assertThat(creations).hasValue(1);
+            factory.close();
+            assertThrows(IllegalStateException.class, () -> factory.bind(new Toolkit()));
+        }
+    }
+
+    @Test
+    void failedNativeRegistrationRollsBackToolsAndClosesEveryCreatedClient() {
+        var properties = new AgentScopePolarisMcpProperties();
+        Client a = new Client();
+        a.setServiceName("one");
+        Client b = new Client();
+        b.setServiceName("two");
+        properties.getDiscovery().setClients(List.of(a, b));
+        try (var manager = new PolarisMcpServerManager(consumer, "default");
+                var factory =
+                        new PolarisMcpClientFactory(manager, properties) {
+                            @Override
+                            protected PolarisMcpClientWrapper createClient(Client settings) {
+                                McpSchema.Tool tool =
+                                        McpSchema.Tool.builder()
+                                                .name(settings.getServiceName())
+                                                .inputSchema(
+                                                        McpJsonMapper.getDefault(),
+                                                        "{\"type\":\"object\"}")
+                                                .build();
+                                return PolarisMcpClientBuilder.create(
+                                                settings.getServiceName(), manager)
+                                        .clientFactory(
+                                                endpoint ->
+                                                        new NativeClient() {
+                                                            @Override
+                                                            public Mono<List<McpSchema.Tool>>
+                                                                    listTools() {
+                                                                return Mono.just(List.of(tool));
+                                                            }
+
+                                                            @Override
+                                                            public void close() {
+                                                                closes.incrementAndGet();
+                                                            }
+                                                        })
+                                        .build();
+                            }
+                        }) {
+            Toolkit toolkit = spy(new Toolkit());
+            doReturn(Mono.error(new IllegalStateException("registration failed")))
+                    .when(toolkit)
+                    .registerMcpClient(argThat(client -> "two".equals(client.getName())));
+            assertThrows(IllegalStateException.class, () -> factory.bind(toolkit));
+            assertThat(toolkit.getToolNames()).isEmpty();
+            assertThat(closes).hasValue(2);
+            assertThat(manager.subscriptionCount()).isZero();
+        }
+    }
+
+    @Test
+    void timerRecyclesIdleConnectionsAndNextCallReconnectsWithTheSameTools() throws Exception {
+        var properties = new AgentScopePolarisMcpProperties();
+        Client client = new Client();
+        client.setServiceName("tools");
+        properties.getDiscovery().setClients(List.of(client));
+        properties.getDiscovery().setIdleTimeout(Duration.ofMillis(100));
+        try (var manager = new PolarisMcpServerManager(consumer, "default");
+                var factory =
+                        new PolarisMcpClientFactory(manager, properties) {
+                            @Override
+                            protected PolarisMcpClientWrapper createClient(Client settings) {
+                                var wrapper =
+                                        PolarisMcpClientBuilder.create("tools", manager)
+                                                .clientFactory(
+                                                        endpoint -> {
+                                                            creations.incrementAndGet();
+                                                            return new NativeClient() {
+                                                                @Override
+                                                                public void close() {
+                                                                    closes.incrementAndGet();
+                                                                }
+                                                            };
+                                                        })
+                                                .build();
+                                return wrapper;
+                            }
+                        }) {
+            Toolkit toolkit = new Toolkit();
+            factory.bind(toolkit);
+            long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
+            while (manager.subscriptionCount() != 0 && System.nanoTime() < deadline)
+                Thread.sleep(10);
+            assertThat(manager.subscriptionCount()).isZero();
+            assertThat(toolkit.getToolNames()).contains("lookup");
+            assertLookup(toolkit);
+            assertThat(creations).hasValue(2);
+            factory.release(toolkit);
             assertThat(toolkit.getToolNames()).isEmpty();
             assertThat(manager.subscriptionCount()).isZero();
         }
