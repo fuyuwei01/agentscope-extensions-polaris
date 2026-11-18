@@ -133,6 +133,8 @@ public final class PolarisMcpClientWrapper extends McpClientWrapper {
     private void connect() {
         PolarisMcpServerManager.Lease acquired;
         synchronized (lock) {
+            // A scheduled reconnect may start after close() has already released the lease.
+            if (closed) throw failure(PolarisMcpException.Reason.CLOSED, "MCP client is closed");
             acquired = lease;
         }
         if (acquired == null) {

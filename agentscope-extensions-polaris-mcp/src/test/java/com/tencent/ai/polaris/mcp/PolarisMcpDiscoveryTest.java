@@ -46,6 +46,8 @@ import org.mockito.ArgumentCaptor;
 
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.util.List;
@@ -56,6 +58,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 class PolarisMcpDiscoveryTest {
     private static final Duration WAIT = Duration.ofSeconds(5);
@@ -242,9 +245,24 @@ class PolarisMcpDiscoveryTest {
             assertEquals(0, manager.subscriptionCount());
             ArgumentCaptor<UnWatchServiceRequest> request =
                     ArgumentCaptor.forClass(UnWatchServiceRequest.class);
-            verify(registry.consumer).unWatchService(request.capture());
-            assertFalse(request.getValue().isRemoveAll());
-            assertEquals(1, request.getValue().getListeners().size());
+            ArgumentCaptor<WatchServiceRequest> watches =
+                    ArgumentCaptor.forClass(WatchServiceRequest.class);
+            // An acquisition already in progress at close may briefly create another subscription.
+            // Every watch must have a matching unwatch with only its own listener removed.
+            verify(registry.consumer, atLeastOnce()).watchService(watches.capture());
+            verify(registry.consumer, timeout(5000).times(watches.getAllValues().size()))
+                    .unWatchService(request.capture());
+            for (UnWatchServiceRequest unwatch : request.getAllValues()) {
+                assertFalse(unwatch.isRemoveAll());
+                assertEquals(1, unwatch.getListeners().size());
+            }
+            assertEquals(
+                    watches.getAllValues().stream()
+                            .flatMap(watch -> watch.getListeners().stream())
+                            .collect(Collectors.toSet()),
+                    request.getAllValues().stream()
+                            .flatMap(unwatch -> unwatch.getListeners().stream())
+                            .collect(Collectors.toSet()));
         }
     }
 
@@ -374,6 +392,45 @@ class PolarisMcpDiscoveryTest {
             verify(registry.consumer, times(1)).unWatchService(any());
         } finally {
             proceed.countDown();
+        }
+    }
+
+    @Test
+    void queuedInitializationDoesNotAcquireDiscoveryAfterClose() throws Exception {
+        Registry registry = new Registry(instance("a", "mcp-streamable-http", null));
+        Scheduler scheduler = Schedulers.newSingle("mcp-queued-close-test");
+        CountDownLatch occupied = new CountDownLatch(1);
+        CountDownLatch proceed = new CountDownLatch(1);
+        try (PolarisMcpServerManager manager =
+                        new PolarisMcpServerManager(registry.consumer, "default") {
+                            @Override
+                            public Scheduler scheduler() {
+                                return scheduler;
+                            }
+                        };
+                PolarisMcpClientWrapper client =
+                        PolarisMcpClientBuilder.create("tools", manager)
+                                .clientFactory(endpoint -> new FakeClient(List.of(TOOL)))
+                                .build()) {
+            scheduler.schedule(
+                    () -> {
+                        occupied.countDown();
+                        try {
+                            proceed.await(5, TimeUnit.SECONDS);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                    });
+            assertTrue(occupied.await(5, TimeUnit.SECONDS));
+            CompletableFuture<Void> init = client.initialize().toFuture();
+            client.close();
+            proceed.countDown();
+            assertThrows(Exception.class, () -> init.get(5, TimeUnit.SECONDS));
+            assertEquals(0, manager.subscriptionCount());
+            verify(registry.consumer, never()).watchService(any());
+        } finally {
+            proceed.countDown();
+            scheduler.dispose();
         }
     }
 
