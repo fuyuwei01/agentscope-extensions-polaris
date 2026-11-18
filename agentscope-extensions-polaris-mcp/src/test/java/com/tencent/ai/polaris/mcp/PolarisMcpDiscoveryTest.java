@@ -25,6 +25,7 @@ import com.tencent.ai.polaris.mcp.client.PolarisMcpClientWrapper;
 import com.tencent.ai.polaris.mcp.discovery.PolarisMcpServerManager;
 import com.tencent.ai.polaris.mcp.exception.PolarisMcpException;
 import com.tencent.ai.polaris.mcp.model.PolarisMcpEndpoint;
+import com.tencent.ai.polaris.mcp.model.PolarisMcpServiceKey;
 import com.tencent.polaris.api.core.ConsumerAPI;
 import com.tencent.polaris.api.listener.ServiceListener;
 import com.tencent.polaris.api.pojo.DefaultInstance;
@@ -192,7 +193,7 @@ class PolarisMcpDiscoveryTest {
     }
 
     @Test
-    void sharesOnlyDiscoveryAndRetainsSessionUntilItsInstanceDisappears() {
+    void sharesOnlyDiscoveryAndRetainsSessionUntilItsInstanceDisappears() throws Exception {
         DefaultInstance a = instance("a", "mcp-streamable-http", "/mcp");
         DefaultInstance b = instance("b", "mcp-streamable-http", "/mcp");
         Registry registry = new Registry(a);
@@ -231,6 +232,12 @@ class PolarisMcpDiscoveryTest {
                 first.callTool("lookup", Map.of()).block(WAIT);
                 assertEquals("b", first.getSelectedEndpoint().id());
                 assertEquals(1, delegates.get("b").calls.get());
+            }
+            // A queued reconnect can still be acquiring a lease when close() returns.
+            // It releases that lease as soon as acquisition observes the closed client.
+            long closeDeadline = System.nanoTime() + WAIT.toNanos();
+            while (manager.subscriptionCount() != 0 && System.nanoTime() < closeDeadline) {
+                Thread.sleep(10);
             }
             assertEquals(0, manager.subscriptionCount());
             ArgumentCaptor<UnWatchServiceRequest> request =
@@ -319,6 +326,54 @@ class PolarisMcpDiscoveryTest {
             assertNull(client.getSelectedEndpoint());
             assertEquals(1, fake.closes.get());
             assertEquals(0, manager.subscriptionCount());
+        }
+    }
+
+    @Test
+    void closingDuringDiscoveryAcquisitionReleasesTheLateLease() throws Exception {
+        Registry registry = new Registry(instance("a", "mcp-streamable-http", null));
+        CountDownLatch acquired = new CountDownLatch(1);
+        CountDownLatch proceed = new CountDownLatch(1);
+        FakeClient fake = new FakeClient(List.of(TOOL));
+        try (PolarisMcpServerManager manager =
+                        new PolarisMcpServerManager(registry.consumer, "default") {
+                            @Override
+                            public Lease acquire(PolarisMcpServiceKey key, Runnable observer) {
+                                Lease lease = super.acquire(key, observer);
+                                acquired.countDown();
+                                try {
+                                    if (!proceed.await(5, TimeUnit.SECONDS)) {
+                                        lease.close();
+                                        throw new IllegalStateException("Acquisition did not resume");
+                                    }
+                                } catch (InterruptedException e) {
+                                    lease.close();
+                                    Thread.currentThread().interrupt();
+                                    throw new IllegalStateException(e);
+                                }
+                                return lease;
+                            }
+                        };
+                PolarisMcpClientWrapper client =
+                        PolarisMcpClientBuilder.create("tools", manager)
+                                .clientFactory(endpoint -> fake)
+                                .build()) {
+            CompletableFuture<Void> init = client.initialize().toFuture();
+            try {
+                assertTrue(acquired.await(5, TimeUnit.SECONDS));
+                client.close();
+                // The acquiring worker still owns the lease until acquire() returns.
+                assertEquals(1, manager.subscriptionCount());
+            } finally {
+                proceed.countDown();
+            }
+            assertThrows(Exception.class, () -> init.get(5, TimeUnit.SECONDS));
+            assertEquals(0, manager.subscriptionCount());
+            assertFalse(client.isInitialized());
+            assertEquals(0, fake.inits.get());
+            verify(registry.consumer, times(1)).unWatchService(any());
+        } finally {
+            proceed.countDown();
         }
     }
 
