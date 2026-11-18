@@ -1,6 +1,6 @@
 # A2A Spring Boot Server Example Configuration
 server:
-  port: 8888
+  port: ${A2A_SERVER_PORT:8888}
 
 spring:
   main:
@@ -27,7 +27,7 @@ agentscope:
   # ReActAgent auto-built by the agentscope-spring-boot-starter
   agent:
     enabled: true
-    name: polaris-a2a-example-agent
+    name: ${A2A_AGENT_NAME:polaris-a2a-example-agent}
     sys-prompt: >-
       You are a helpful assistant. Use the provided tools when the user asks about
       weather, arithmetic, or the current time. Reply concisely.
@@ -71,5 +71,6 @@ agentscope:
       registry:
         enabled: true
         ttl: 5
+        port: ${POLARIS_REGISTRY_PORT:1}
       discovery:
         enabled: true

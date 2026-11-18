@@ -4,9 +4,13 @@ spring:
     banner-mode: off
     web-application-type: none
 
+polaris:
+  demo:
+    discovery:
+      # Demo-specific target agent (Polaris service) name.
+      agent-name: ${A2A_AGENT_NAME:polaris-a2a-example-agent}
+
 agentscope:
-  a2a:
-    agent-name: ${A2A_AGENT_NAME:polaris-a2a-example-agent}
   polaris:
     enabled: ${POLARIS_ENABLED:true}
     address: ${POLARIS_DISCOVERY_ADDRESS:127.0.0.1:8091}

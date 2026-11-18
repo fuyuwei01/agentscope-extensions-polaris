@@ -31,16 +31,16 @@ public final class PolarisA2aConstants {
     public static final String META_AGENT_NAME = "ai-agent-name";
 
     /** Holds the full serialized {@link io.a2a.spec.AgentCard} JSON. */
-    public static final String META_AGENT_CARD = "a2a.agent.card";
+    public static final String META_AGENT_CARD = "ai-agent-card";
 
-    /** Transport type of this instance endpoint (e.g. JSONRPC, HTTP+JSON). */
-    public static final String META_TRANSPORT = "a2a.transport";
-
-    /** URL path of this instance endpoint. */
-    public static final String META_PATH = "a2a.path";
+    /** A2A protocol version declared by {@link io.a2a.spec.AgentCard#protocolVersion()}. */
+    public static final String META_A2A_VERSION = "ai-a2a-version";
 
     /** Registry name reported to AgentScope. */
     public static final String REGISTRY_NAME = "Polaris";
+
+    /** Default Polaris registration port, independent of the A2A transport endpoint. */
+    public static final int DEFAULT_REGISTRATION_PORT = 1;
 
     /** Default heartbeat ttl (seconds) used by {@code registerInstance}. */
     public static final int DEFAULT_TTL_SECONDS = 5;

@@ -16,6 +16,8 @@
 
 package com.tencent.ai.polaris.spring.boot.config.a2a;
 
+import com.tencent.ai.polaris.a2a.constant.PolarisA2aConstants;
+
 /**
  * Registry behavior properties ({@code agentscope.polaris.a2a.registry}).
  */
@@ -26,6 +28,9 @@ public class PolarisA2aRegistryProperties {
 
     /** Heartbeat ttl in seconds (autoHeartbeat is always on). Default {@code 5}. */
     private int ttl = 5;
+
+    /** Polaris registration port, independent of the A2A transport port. Default {@code 1}. */
+    private int port = PolarisA2aConstants.DEFAULT_REGISTRATION_PORT;
 
     public boolean isEnabled() {
         return enabled;
@@ -41,5 +46,13 @@ public class PolarisA2aRegistryProperties {
 
     public void setTtl(int ttl) {
         this.ttl = ttl;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
     }
 }

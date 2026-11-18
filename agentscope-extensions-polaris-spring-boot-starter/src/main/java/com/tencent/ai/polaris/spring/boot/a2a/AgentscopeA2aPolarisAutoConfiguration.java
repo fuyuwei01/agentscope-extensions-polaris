@@ -66,6 +66,7 @@ public class AgentscopeA2aPolarisAutoConfiguration {
             PolarisContextManager context, AgentScopeA2aPolarisProperties a2aProperties) {
         return PolarisAgentRegistry.builder(context)
                 .ttl(a2aProperties.getRegistry().getTtl())
+                .port(a2aProperties.getRegistry().getPort())
                 .build();
     }
 

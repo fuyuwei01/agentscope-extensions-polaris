@@ -19,6 +19,8 @@ package com.tencent.ai.polaris.spring.boot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.any;
 
 import com.tencent.ai.polaris.core.PolarisContextManager;
 import com.tencent.ai.polaris.spring.boot.a2a.AgentscopeA2aPolarisAutoConfiguration;
@@ -26,13 +28,26 @@ import com.tencent.ai.polaris.spring.boot.config.AgentScopePolarisProperties;
 import com.tencent.ai.polaris.spring.boot.config.a2a.AgentScopeA2aPolarisProperties;
 import io.agentscope.core.a2a.agent.card.AgentCardResolver;
 import io.agentscope.core.a2a.server.registry.AgentRegistry;
+import io.agentscope.core.a2a.server.transport.TransportProperties;
+import io.a2a.spec.AgentCapabilities;
+import io.a2a.spec.AgentCard;
+import com.tencent.polaris.api.core.ProviderAPI;
+import com.tencent.polaris.api.exception.PolarisException;
+import com.tencent.polaris.api.rpc.InstanceDeregisterRequest;
+import com.tencent.polaris.api.rpc.InstanceRegisterRequest;
+import com.tencent.polaris.api.rpc.InstanceRegisterResponse;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedConstruction;
 import org.mockito.Mockito;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
 
 /**
  * Tests for {@link AgentscopePolarisAutoConfiguration} and
@@ -97,6 +112,40 @@ class AgentscopePolarisAutoConfigurationTest {
                 });
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {1, 18080})
+    void shouldUseDefaultOrConfiguredPortForRegistrationAndDeregistration(int port) throws PolarisException {
+        PolarisContextManager sharedContext = stubContextManager();
+        ProviderAPI provider = sharedContext.providerAPI();
+        when(provider.registerInstance(any(InstanceRegisterRequest.class)))
+                .thenReturn(new InstanceRegisterResponse("inst-configured", false));
+        AgentCard card = new AgentCard.Builder()
+                .name("echo")
+                .description("echo")
+                .version("1.0.0")
+                .url("http://localhost:8080/")
+                .capabilities(new AgentCapabilities(false, false, false, List.of()))
+                .defaultInputModes(List.of("text"))
+                .defaultOutputModes(List.of("text"))
+                .skills(List.of())
+                .build();
+
+        ApplicationContextRunner registrationRunner = port == 1 ? runner
+                : runner.withPropertyValues("agentscope.polaris.a2a.registry.port=" + port);
+        registrationRunner.withBean(PolarisContextManager.class, () -> sharedContext)
+                .run(context -> context.getBean(AgentRegistry.class).register(card, List.of(
+                        TransportProperties.builder("JSONRPC").host("localhost").port(8080).build())));
+
+        ArgumentCaptor<InstanceRegisterRequest> register = ArgumentCaptor.forClass(InstanceRegisterRequest.class);
+        verify(provider).registerInstance(register.capture());
+        assertThat(register.getValue().getPort()).isEqualTo(port);
+        assertThat(register.getValue().getProtocol()).isEmpty();
+        ArgumentCaptor<InstanceDeregisterRequest> deregister = ArgumentCaptor.forClass(InstanceDeregisterRequest.class);
+        verify(provider).deRegister(deregister.capture());
+        assertThat(deregister.getValue().getPort()).isEqualTo(port);
+        assertThat(deregister.getValue().getInstanceID()).isEqualTo("inst-configured");
+    }
+
     @Test
     void shouldNotCreateDiscoveryBeanWhenDiscoveryDisabled() {
         runner.withPropertyValues(
@@ -116,6 +165,8 @@ class AgentscopePolarisAutoConfigurationTest {
                 .run(context -> {
                     assertThat(context).hasSingleBean(AgentRegistry.class);
                     assertThat(context).hasSingleBean(AgentCardResolver.class);
+                    assertThat(context.getBean(AgentScopeA2aPolarisProperties.class).getRegistry().getPort())
+                            .isEqualTo(1);
                 });
     }
 
@@ -212,7 +263,8 @@ class AgentscopePolarisAutoConfigurationTest {
                         "agentscope.polaris.namespace=prod",
                         "agentscope.polaris.token=secret",
                         "agentscope.polaris.a2a.enabled=true",
-                        "agentscope.polaris.a2a.registry.ttl=10")
+                        "agentscope.polaris.a2a.registry.ttl=10",
+                        "agentscope.polaris.a2a.registry.port=18080")
                 .run(context -> {
                     AgentScopePolarisProperties polarisProps =
                             context.getBean(AgentScopePolarisProperties.class);
@@ -225,6 +277,7 @@ class AgentscopePolarisAutoConfigurationTest {
                             context.getBean(AgentScopeA2aPolarisProperties.class);
                     assertThat(a2aProps.isEnabled()).isTrue();
                     assertThat(a2aProps.getRegistry().getTtl()).isEqualTo(10);
+                    assertThat(a2aProps.getRegistry().getPort()).isEqualTo(18080);
                     assertThat(a2aProps.getDiscovery().isEnabled()).isTrue();
                 });
     }

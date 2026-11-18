@@ -66,6 +66,7 @@ import java.util.concurrent.CountDownLatch;
  * <ul>
  *   <li>{@code POLARIS_DISCOVERY_ADDRESS} — Polaris server address, default {@code 127.0.0.1:8091}</li>
  *   <li>{@code POLARIS_SKILL_ADDRESS} — SkillAPI address; defaults to the discovery host on port 8094</li>
+ *   <li>{@code POLARIS_REGISTRY_PORT} — Polaris instance port, default {@code 1}</li>
  *   <li>{@code POLARIS_SKILL_SOURCE} — {@code mounted} (default) reads the skills mounted on this agent's service,
  *       {@code published} reads every published skill in the namespace, {@code none} disables skills</li>
  *   <li>{@code A2A_AGENT_NAME} — agent (Polaris service) name, default {@code polaris-a2a-example-agent}</li>
@@ -111,7 +112,9 @@ public class PolarisA2aServerExample {
         PolarisContextManager context = skillAddress.isEmpty()
                 ? PolarisContextManager.fromAddress(polarisAddress)
                 : PolarisContextManager.fromAddress(polarisAddress, skillAddress);
-        PolarisAgentRegistry registry = PolarisAgentRegistry.builder(context).build();
+        PolarisAgentRegistry registry = PolarisAgentRegistry.builder(context)
+                .port(Integer.parseInt(env("POLARIS_REGISTRY_PORT", "1")))
+                .build();
 
         // 2. Skill source. 'mounted' reads the skills mounted on this agent's own Polaris service,
         //    hence the repository takes the same name the registry registers under.

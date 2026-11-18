@@ -32,6 +32,7 @@ import org.springframework.context.annotation.Bean;
  * (PolarisAgentCardResolver). This app wires it into an {@link A2aAgent} bean and runs an interactive multi-turn REPL
  * via a {@link CommandLineRunner}: the agent discovers the remote card from Polaris by name and streams its reply.
  *
+ * <p>{@code polaris.demo.discovery.agent-name} selects the target agent in this demo.
  * <p>Run the Spring Boot server example first, then this client.
  */
 @SpringBootApplication
@@ -44,7 +45,7 @@ public class PolarisA2aClientSpringBootExample {
     @Bean
     A2aAgent a2aAgent(
             AgentCardResolver agentCardResolver,
-            @Value("${agentscope.a2a.agent-name}") String agentName) {
+            @Value("${polaris.demo.discovery.agent-name}") String agentName) {
         return A2aAgent.builder()
                 .name(agentName)
                 .agentCardResolver(agentCardResolver)

@@ -1,0 +1,87 @@
+# A2A Spring Boot Server Example Configuration
+server:
+  port: ${A2A_SERVER_PORT:8888}
+
+spring:
+  main:
+    banner-mode: off
+  mvc:
+    async:
+      # A2A message/stream is a long-lived SSE request. Keep the Servlet async
+      # request alive while the model is reasoning or executing tools.
+      request-timeout: ${A2A_STREAM_TIMEOUT:10m}
+
+agentscope:
+  # Model options:
+  #   openai              OpenAI-compatible real model (configure agentscope.openai below)
+  #   skill-command-mock  offline /skill-list and /skill <name> support
+  #   echo-last-user-input  offline echo model
+
+  model:
+    provider: ${A2A_MODEL_PROVIDER:openai}
+  openai:
+    api-key: ${TOKEN_HUB_API_KEY:}
+    base-url: ${TOKEN_HUB_BASE_URL:https://api.openai.com/v1}
+    model-name: ${OPENAI_MODEL:}
+
+  # ReActAgent auto-built by the agentscope-spring-boot-starter
+  agent:
+    enabled: true
+    name: ${A2A_AGENT_NAME:polaris-a2a-additional-interfaces-example-agent}
+    sys-prompt: >-
+      You are a helpful assistant. Use the provided tools when the user asks about
+      weather, arithmetic, or the current time. Reply concisely.
+    max-iters: 10
+
+  # A2A server + agent card
+  a2a:
+    server:
+      enabled: true
+      card:
+        description: "A2A agent registered to Polaris (Spring Boot example)"
+        version: "1.0.0"
+        preferred-transport: JSONRPC
+        # a2a.instance-ip is supplied automatically before the starter binds these properties.
+        url: "http://${a2a.instance-ip}:${server.port}${server.servlet.context-path:}/"
+        additional-interfaces:
+          - transport: HTTP+JSON
+            url: "http://${a2a.instance-ip}:${server.port}${server.servlet.context-path:}${agentscope.a2a.server.rest.path}"
+          - transport: GRPC
+            url: "http://${a2a.instance-ip}:${agentscope.a2a.server.grpc.port}"
+        provider:
+          organization: AgentScope Extensions Polaris
+          url: https://github.com/polarismesh/agentscope-extensions-polaris
+        skills:
+          - id: get_weather
+            name: Get Weather
+            description: Get current weather information for a city.
+            tags: [weather]
+          - id: calculate
+            name: Calculate
+            description: Perform a simple arithmetic calculation (supports +, -, *, /).
+            tags: [math]
+          - id: get_current_time
+            name: Get Current Time
+            description: Get the current date and time.
+            tags: [time]
+      grpc:
+        port: ${A2A_GRPC_PORT:8889}
+      rest:
+        path: /a2a/rest
+  polaris:
+    enabled: ${POLARIS_ENABLED:true}
+    address: ${POLARIS_DISCOVERY_ADDRESS:127.0.0.1:8091}
+    namespace: ${POLARIS_NAMESPACE:default}
+    token: ${POLARIS_TOKEN:}
+    skill:
+      enabled: true
+      mounted:
+        enabled: true
+    a2a:
+      enabled: true
+      registry:
+        enabled: true
+        ttl: 5
+        port: ${POLARIS_REGISTRY_PORT:1}
+      discovery:
+        enabled: true

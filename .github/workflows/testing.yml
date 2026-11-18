@@ -22,6 +22,10 @@ jobs:
         os: [ 'ubuntu-latest', 'windows-latest' ]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Enable long paths on Windows
+        if: runner.os == 'Windows'
+        run: git config --global core.longpaths true
+
       - name: Checkout codes
         uses: actions/checkout@v6
       - name: Set up JDK ${{ matrix.java }}

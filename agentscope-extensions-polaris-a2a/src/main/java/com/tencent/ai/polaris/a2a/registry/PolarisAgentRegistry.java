@@ -17,6 +17,7 @@
 package com.tencent.ai.polaris.a2a.registry;
 
 import static com.tencent.ai.polaris.a2a.constant.PolarisA2aConstants.MAX_METADATA_VALUE_CHARS;
+import static com.tencent.ai.polaris.a2a.constant.PolarisA2aConstants.META_A2A_VERSION;
 import static com.tencent.ai.polaris.a2a.constant.PolarisA2aConstants.META_AGENT_NAME;
 
 import com.tencent.ai.polaris.a2a.constant.PolarisA2aConstants;
@@ -35,25 +36,28 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * AgentScope A2A registry backed by polaris-java.
  *
  * <p>Service mapping: {@link AgentCard#name()} is the Polaris service name; each
- * exported {@link TransportProperties} becomes one Polaris instance (host / port /
- * protocol / version). Discovery ({@link com.tencent.ai.polaris.a2a.discovery.PolarisAgentCardResolver})
- * rebuilds the card from instance metadata.
+ * distinct host in the exported {@link TransportProperties} becomes one Polaris instance.
+ * The registration port defaults to {@code 1} and the protocol is empty; A2A endpoint URLs
+ * remain in the AgentCard. Discovery
+ * ({@link com.tencent.ai.polaris.a2a.discovery.PolarisAgentCardResolver}) rebuilds the card
+ * from instance metadata.
  *
  * <p>Metadata written on each instance:
  * <ul>
  *   <li>{@link PolarisA2aConstants#META_AGENT_CARD} — full AgentCard JSON</li>
  *   <li>{@link PolarisA2aConstants#META_AGENT_NAME} — agent name</li>
- *   <li>{@link PolarisA2aConstants#META_TRANSPORT} / {@link PolarisA2aConstants#META_PATH} —
- *       locator fields for this endpoint</li>
+ *   <li>{@link PolarisA2aConstants#META_A2A_VERSION} — A2A protocol version from the AgentCard</li>
  * </ul>
  * A single metadata value must be at most {@link PolarisA2aConstants#MAX_METADATA_VALUE_CHARS}
  * characters (64KiB − 1). Oversized values throw {@link IllegalArgumentException}
@@ -78,6 +82,7 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
     private final ProviderAPI providerAPI;
     private final String namespace;
     private final int ttl;
+    private final int port;
     private final String serviceToken;
     private final CopyOnWriteArrayList<RegisteredInstance> registered = new CopyOnWriteArrayList<>();
 
@@ -103,10 +108,18 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
      * @param serviceToken Polaris service token, or {@code null} to omit {@code setToken}
      */
     PolarisAgentRegistry(ProviderAPI providerAPI, String namespace, int ttl, String serviceToken) {
+        this(providerAPI, namespace, ttl, serviceToken, PolarisA2aConstants.DEFAULT_REGISTRATION_PORT);
+    }
+
+    PolarisAgentRegistry(ProviderAPI providerAPI, String namespace, int ttl, String serviceToken, int port) {
         this.providerAPI = Objects.requireNonNull(providerAPI, "providerAPI");
         this.namespace = Objects.requireNonNull(namespace, "namespace");
         this.ttl = ttl;
         this.serviceToken = blankToNull(serviceToken);
+        if (port < 0 || port > 65_535) {
+            throw new IllegalArgumentException("registration port must be between 0 and 65535: " + port);
+        }
+        this.port = port;
     }
 
     @Override
@@ -115,11 +128,11 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
     }
 
     /**
-     * Register one Polaris instance per transport. Partial success is rolled back.
+     * Register one Polaris instance per distinct transport host. Partial success is rolled back.
      *
-     * @param agentCard identity and JSON payload stored under {@code a2a.agent.card}
-     * @param transports non-empty list; each entry needs a non-null port
-     * @throws IllegalArgumentException if transports are empty, a port is missing, or
+     * @param agentCard identity and JSON payload stored under {@code ai-agent-card}
+     * @param transports non-empty list supplying the instance hosts
+     * @throws IllegalArgumentException if transports are empty or
      *         any metadata value exceeds {@link PolarisA2aConstants#MAX_METADATA_VALUE_CHARS}
      * @throws IllegalStateException if Polaris {@code registerInstance} fails
      */
@@ -132,27 +145,28 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
         String service = agentCard.name();
         String cardJson = AgentCardCodec.toJson(agentCard);
         List<RegisteredInstance> registeredThisCall = new ArrayList<>();
+        Set<String> registeredHosts = new HashSet<>();
 
         try {
             for (TransportProperties tp : transports) {
+                if (!registeredHosts.add(tp.host())) {
+                    continue;
+                }
                 InstanceRegisterRequest req = new InstanceRegisterRequest();
                 req.setNamespace(namespace);
                 req.setService(service);
                 req.setHost(tp.host());
-                Integer port = tp.port();
-                if (port == null) {
-                    throw new IllegalArgumentException("transport port must not be null for agent: " + service);
-                }
                 req.setPort(port);
                 req.setVersion(agentCard.version());
-                req.setProtocol(resolveProtocol(tp));
+                req.setProtocol("");
                 req.setTtl(ttl);
                 req.setAutoHeartbeat(true);
                 if (serviceToken != null) {
                     req.setToken(serviceToken);
                 }
-                Map<String, String> meta = buildMetadata(cardJson, tp);
+                Map<String, String> meta = buildMetadata(cardJson);
                 meta.put(META_AGENT_NAME, agentCard.name());
+                meta.put(META_A2A_VERSION, agentCard.protocolVersion());
                 assertMetadataWithinLimit(service, meta);
                 req.setMetadata(meta);
 
@@ -180,18 +194,11 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
     }
 
     /**
-     * Locator + card metadata for one transport. {@link PolarisA2aConstants#META_AGENT_NAME}
-     * is added by the caller after this map is built.
+     * Card metadata for an instance. The caller adds the agent name and A2A protocol version.
      */
-    static Map<String, String> buildMetadata(String cardJson, TransportProperties tp) {
+    static Map<String, String> buildMetadata(String cardJson) {
         Map<String, String> meta = new HashMap<>();
         meta.put(PolarisA2aConstants.META_AGENT_CARD, cardJson);
-        if (tp.transportType() != null) {
-            meta.put(PolarisA2aConstants.META_TRANSPORT, tp.transportType());
-        }
-        if (tp.path() != null) {
-            meta.put(PolarisA2aConstants.META_PATH, tp.path());
-        }
         return meta;
     }
 
@@ -212,11 +219,6 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
                                 + MAX_METADATA_VALUE_CHARS + " (64KiB). Registration aborted.");
             }
         }
-    }
-
-    /** {@code https} when the transport advertises TLS, otherwise {@code http}. */
-    private static String resolveProtocol(TransportProperties tp) {
-        return tp.supportTls() ? "https" : "http";
     }
 
     /**
@@ -283,13 +285,15 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
 
     /**
      * Fluent factory. {@link #ttl(int)} defaults to
-     * {@link PolarisA2aConstants#DEFAULT_TTL_SECONDS}; the service token is taken
+     * {@link PolarisA2aConstants#DEFAULT_TTL_SECONDS}; {@link #port(int)} defaults to
+     * {@link PolarisA2aConstants#DEFAULT_REGISTRATION_PORT}. The service token is taken
      * from {@link PolarisContextManager#getProperties()}.
      */
     public static final class Builder {
 
         private final PolarisContextManager context;
         private int ttl = PolarisA2aConstants.DEFAULT_TTL_SECONDS;
+        private int port = PolarisA2aConstants.DEFAULT_REGISTRATION_PORT;
 
         private Builder(PolarisContextManager context) {
             this.context = Objects.requireNonNull(context, "context");
@@ -301,9 +305,15 @@ public class PolarisAgentRegistry implements AgentRegistry, AutoCloseable {
             return this;
         }
 
+        /** Polaris registration port, independent of transport ports; {@code 1} by default. */
+        public Builder port(int port) {
+            this.port = port;
+            return this;
+        }
+
         public PolarisAgentRegistry build() {
             return new PolarisAgentRegistry(
-                    context.providerAPI(), context.getNamespace(), ttl, tokenOrNull(context));
+                    context.providerAPI(), context.getNamespace(), ttl, tokenOrNull(context), port);
         }
     }
 

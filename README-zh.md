@@ -8,21 +8,23 @@ README:
 
 - [介绍](#介绍)
 - [模块](#模块)
+- [A2A 注册](#a2a-注册)
 - [Skill 用法](#skill-用法)
 - [如何构建](#如何构建)
 
 ## 介绍
 
-AgentScope Extensions Polaris 是一个 [AgentScope Java](https://github.com/agentscope-ai/agentscope-java) 扩展项目，集成 [北极星](https://polarismesh.cn/)（PolarisMesh）实现 MCP / A2A / Skill 的注册、发现与治理。
+AgentScope Extensions Polaris 是一个 [AgentScope Java](https://github.com/agentscope-ai/agentscope-java) 扩展项目，集成 [北极星](https://polarismesh.cn/)（PolarisMesh）实现 A2A 注册与发现，以及已发布和服务挂载 Skill 的只读加载。
 
 - [北极星 Github](https://github.com/polarismesh/polaris)
 - [AgentScope Java Github](https://github.com/agentscope-ai/agentscope-java)
 
-AgentScope 集成北极星可以解决以下问题：
+当前已支持的能力：
 
-- **MCP 管理** — MCP Server 启动时自动注册到北极星；MCP Client 从北极星发现并对实例做负载均衡
 - **A2A 管理** — Agent-to-Agent（A2A）端点注册到北极星，并动态发现对端 Agent
-- **Skill 管理** — AgentScope Skill 集中存储与版本化在北极星，统一下发
+- **Skill 加载** — 从北极星加载已发布的 Skill，包括服务挂载的指定版本，并接入 AgentScope Agent
+
+MCP 模块目前仅预留模块和依赖，尚未实现 MCP Server 注册、发现及客户端负载均衡。
 
 ## 模块
 
@@ -30,12 +32,51 @@ AgentScope 集成北极星可以解决以下问题：
 agentscope-extensions-polaris (root)
 ├── agentscope-extensions-polaris-bom                 # 版本管理 BOM
 ├── agentscope-extensions-polaris-core                # Polaris SDK 封装（polaris-all）
-├── agentscope-extensions-polaris-mcp                 # MCP 扩展
+├── agentscope-extensions-polaris-mcp                 # MCP 预留模块（尚未实现）
 ├── agentscope-extensions-polaris-a2a                 # A2A 注册 / 发现
-├── agentscope-extensions-polaris-skill               # Skill 扩展
+├── agentscope-extensions-polaris-skill               # Skill 只读仓库
 ├── agentscope-extensions-polaris-spring-boot-starter # Spring Boot 自动装配（Boot 3.2+）
 └── agentscope-extensions-polaris-example             # 示例（不发布）
 ```
+
+## A2A 注册
+
+`PolarisAgentRegistry` 默认以空协议和端口 `1` 向北极星注册每个不同的 transport host。
+同一 host 上的多个 transport 共用一个注册实例。客户端访问的 A2A 端点 URL 保留在 AgentCard 中。
+
+实例元数据包含 `ai-agent-name`、保存完整 AgentCard JSON 的 `ai-agent-card`，以及表示 A2A 协议版本的
+`ai-a2a-version`。协议版本取自 `AgentCard.protocolVersion`，当前 AgentScope 1.0.12 使用 `0.3.0`。
+北极星实例的 `version` 仍取自 `AgentCard.version`，表示 Agent 自身的业务版本。
+
+通过 `agentscope.polaris.a2a.registry.port` 可以指定北极星实例注册端口：
+
+```yaml
+agentscope:
+  polaris:
+    address: 127.0.0.1:8091
+    a2a:
+      registry:
+        port: 18080        # 可选，默认 1
+```
+
+纯 Java 用法：`PolarisAgentRegistry.builder(context).port(18080).build()`。
+原有的纯 Java 和 Spring Boot A2A server 示例都支持 `POLARIS_REGISTRY_PORT` 环境变量，默认 `1`。该设置用于注册和注销；
+A2A server 的监听端口需要单独配置。
+
+### Spring Boot 服务端示例
+
+基础示例 [`a2a-server-spring-boot`](agentscope-extensions-polaris-example/a2a/a2a-server-spring-boot)
+直接使用官方 AgentScope Starter，提供 `/` 上的 JSON-RPC 接口并注册到北极星。
+学习 Spring Boot 基础接入时从该示例开始。
+
+进阶示例 [`a2a-server-additional-interfaces-spring-boot`](agentscope-extensions-polaris-example/a2a/a2a-server-additional-interfaces-spring-boot)
+增加 HTTP 端口（默认 `8888`）上的 HTTP+JSON `/a2a/rest`，以及 `A2A_GRPC_PORT`（默认 `8889`）上的 gRPC。
+`additionalInterfaces` 仅声明这两个额外协议，三个协议共用一个 Agent 和任务存储；
+注册时完整卡片保存在一个北极星实例中。构建、离线测试和注册步骤见各示例 README。
+
+Spring Boot 客户端通过示例专用配置 `polaris.demo.discovery.agent-name` 选择要发现的北极星服务，
+默认 `polaris-a2a-example-agent`，也可通过 `A2A_AGENT_NAME` 环境变量设置。例如，启动客户端时传入
+`--polaris.demo.discovery.agent-name=my-agent`。该属性由本项目示例定义，不是 AgentScope 官方 Starter 的配置。
 
 ## Skill 用法
 
@@ -61,7 +102,7 @@ try (PolarisContextManager context =
 }
 ```
 
-`serviceName` 必须与 A2A 注册名一致。运行示例：
+`serviceName` 指定要读取挂载技能的北极星服务。下面的 A2A 示例中，它与 Agent 注册名一致。运行示例：
 
 ```bash
 POLARIS_ADDRESS=127.0.0.1:8091 POLARIS_SKILL_ADDRESS=127.0.0.1:8094 \
