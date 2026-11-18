@@ -32,6 +32,7 @@
     <description>Examples for AgentScope Extensions Polaris</description>
 
     <modules>
+        <module>mcp</module>
         <module>a2a</module>
         <module>skill</module>
     </modules>
@@ -42,4 +43,14 @@
         <gpg.skip>true</gpg.skip>
         <skipPublishing>true</skipPublishing>
     </properties>
+
+    <profiles>
+        <!-- Harness requires a matching AgentScope snapshot installed before building this example. -->
+        <profile>
+            <id>harness-example</id>
+            <modules>
+                <module>harness</module>
+            </modules>
+        </profile>
+    </profiles>
 </project>

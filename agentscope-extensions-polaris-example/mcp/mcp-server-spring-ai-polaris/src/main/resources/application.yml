@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: spring-ai-polaris-mcp-server-demo
+  ai:
+    mcp:
+      server:
+        name: business-tools
+        version: 1.0.0
+        type: SYNC
+        protocol: ${MCP_PROTOCOL:STREAMABLE}
+    polaris:
+      enabled: ${POLARIS_ENABLED:true}
+      address: ${POLARIS_DISCOVERY_ADDRESS:${POLARIS_ADDRESS:127.0.0.1:8091}}
+      namespace: ${POLARIS_NAMESPACE:default}
+      mcp:
+        server:
+          service-name: ${MCP_SERVICE_NAME:business-mcp-server}
+          host: ${MCP_ADVERTISE_HOST:}
+          contract:
+            enabled: false
+server:
+  port: ${MCP_SERVER_PORT:48082}
+demo:
+  polaris-token: ${POLARIS_TOKEN:}
+  instance-id: ${MCP_INSTANCE_ID:demo-1}

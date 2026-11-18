@@ -1,0 +1,29 @@
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.537 s -- in com.tencent.ai.polaris.core.PolarisContextManagerTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.tencent.ai.polaris.core.PolarisServerPropertiesTest
+[INFO] Tests run: 18, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.543 s -- in com.tencent.ai.polaris.mcp.PolarisMcpHttpIntegrationTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.139 s -- in com.tencent.ai.polaris.mcp.PolarisMcpDiscoveryTest
+[INFO] Tests run: 21, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.668 s -- in com.tencent.ai.polaris.a2a.discovery.PolarisAgentCardResolverTest
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.058 s -- in com.tencent.ai.polaris.a2a.registry.PolarisAgentRegistryTest
+[INFO] Tests run: 24, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 31, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.362 s -- in com.tencent.ai.polaris.skill.PolarisMountedSkillRepositoryTest
+[INFO] Tests run: 43, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.040 s -- in com.tencent.ai.polaris.skill.PolarisSkillRepositoryTest
+[INFO] Tests run: 74, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.998 s -- in com.tencent.ai.polaris.spring.boot.skill.AgentscopePolarisSkillAutoConfigurationTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.217 s -- in com.tencent.ai.polaris.spring.boot.skill.AgentscopePolarisSkillAgentAutoConfigurationTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.tencent.ai.polaris.spring.boot.config.skill.AgentScopePolarisSkillPropertiesTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.366 s -- in com.tencent.ai.polaris.spring.boot.mcp.PolarisMcpAutoConfigurationTest
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.208 s -- in com.tencent.ai.polaris.spring.boot.AgentscopePolarisAutoConfigurationTest
+[INFO] Tests run: 47, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.528 s -- in com.tencent.ai.polaris.example.a2a.model.EchoLastUserInputModelTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.408 s -- in com.tencent.ai.polaris.example.a2a.model.MockModelAutoConfigurationTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.021 s -- in com.tencent.ai.polaris.example.a2a.model.SkillCommandMockModelTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.159 s -- in com.tencent.ai.polaris.example.harness.HarnessIntegrationTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+[INFO] Total time:  15.750 s
+[INFO] Finished at: 2026-11-16T12:20:03+08:00
+
+Executable JAR smoke test: booted on the local test port; ask.sh /skill-list returned JSON-RPC result.kind=message while external features were disabled. The verified smoke-test process was stopped.

@@ -299,6 +299,11 @@
                             <deploymentName>agentscope-extensions-polaris-${project.version}</deploymentName>
                             <!-- Matches exact artifactIds, so keep this list in sync with example modules. -->
                             <excludeArtifacts>
+                                <artifactId>agentscope-extensions-polaris-example-harness</artifactId>
+                                <artifactId>agentscope-extensions-polaris-example-mcp</artifactId>
+                                <artifactId>agentscope-extensions-polaris-example-mcp-client</artifactId>
+                                <artifactId>agentscope-extensions-polaris-example-mcp-client-spring-boot</artifactId>
+                                <artifactId>agentscope-extensions-polaris-example-mcp-server-spring-ai-polaris</artifactId>
                                 <artifactId>agentscope-extensions-polaris-example</artifactId>
                                 <artifactId>agentscope-extensions-polaris-example-a2a</artifactId>
                                 <artifactId>agentscope-extensions-polaris-example-a2a-mock-model</artifactId>

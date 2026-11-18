@@ -1,0 +1,60 @@
+server:
+  port: ${A2A_SERVER_PORT:8889}
+
+spring:
+  application:
+    name: polaris-harness-example
+  main:
+    banner-mode: off
+  mvc:
+    async:
+      request-timeout: ${A2A_STREAM_TIMEOUT:10m}
+
+agentscope:
+  # The example supplies its own Model and HarnessAgent runner.
+  agent:
+    enabled: false
+  a2a:
+    server:
+      enabled: true
+      card:
+        name: ${A2A_AGENT_NAME:polaris-harness-agent}
+        description: Harness Agent with Polaris MCP tools, skills and remote agents
+        version: 1.0.0
+        preferred-transport: JSONRPC
+  polaris:
+    enabled: ${POLARIS_ENABLED:true}
+    address: ${POLARIS_DISCOVERY_ADDRESS:${POLARIS_ADDRESS:127.0.0.1:8091}}
+    namespace: ${POLARIS_NAMESPACE:default}
+    token: ${POLARIS_TOKEN:}
+    mcp:
+      discovery:
+        enabled: ${MCP_DISCOVERY_ENABLED:true}
+        attach-to-toolkit: true
+        toolkit-bean-name: harnessToolkit
+        clients:
+          - name: business-tools
+            service-name: ${MCP_SERVICE_NAME:business-mcp-server}
+    skill:
+      enabled: ${POLARIS_SKILL_ENABLED:true}
+      attach-to-agent: false
+      address: ${POLARIS_SKILL_ADDRESS:}
+      mounted:
+        enabled: ${POLARIS_SKILL_MOUNTED:true}
+        service-name: ${POLARIS_SERVICE:${A2A_AGENT_NAME:polaris-harness-agent}}
+    a2a:
+      registry:
+        enabled: true
+        ttl: 5
+        port: ${POLARIS_REGISTRY_PORT:1}
+      discovery:
+        enabled: true
+
+demo:
+  agent-name: ${A2A_AGENT_NAME:polaris-harness-agent}
+  model-provider: ${A2A_MODEL_PROVIDER:integration-mock}
+  api-key: ${TOKEN_HUB_API_KEY:}
+  base-url: ${TOKEN_HUB_BASE_URL:https://api.openai.com/v1}
+  model-name: ${OPENAI_MODEL:gpt-4o-mini}
+  # Each request receives its own directory below this root.
+  workspace: ${HARNESS_WORKSPACE:${java.io.tmpdir}/polaris-harness-example}

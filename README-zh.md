@@ -10,11 +10,12 @@ README:
 - [模块](#模块)
 - [A2A 注册](#a2a-注册)
 - [Skill 用法](#skill-用法)
+- [MCP 发现](#mcp-发现)
 - [如何构建](#如何构建)
 
 ## 介绍
 
-AgentScope Extensions Polaris 是一个 [AgentScope Java](https://github.com/agentscope-ai/agentscope-java) 扩展项目，集成 [北极星](https://polarismesh.cn/)（PolarisMesh）实现 A2A 注册与发现，以及已发布和服务挂载 Skill 的只读加载。
+AgentScope Extensions Polaris 是一个 [AgentScope Java](https://github.com/agentscope-ai/agentscope-java) 扩展项目，集成 [北极星](https://polarismesh.cn/)（PolarisMesh）实现 A2A 注册与发现、已发布和服务挂载 Skill 的只读加载，以及 MCP 服务发现与远程工具绑定。
 
 - [北极星 Github](https://github.com/polarismesh/polaris)
 - [AgentScope Java Github](https://github.com/agentscope-ai/agentscope-java)
@@ -23,8 +24,8 @@ AgentScope Extensions Polaris 是一个 [AgentScope Java](https://github.com/age
 
 - **A2A 管理** — Agent-to-Agent（A2A）端点注册到北极星，并动态发现对端 Agent
 - **Skill 加载** — 从北极星加载已发布的 Skill，包括服务挂载的指定版本，并接入 AgentScope Agent
-
-MCP 模块目前仅预留模块和依赖，尚未实现 MCP Server 注册、发现及客户端负载均衡。
+- **MCP 发现** — 发现已注册的 MCP Server，将远程工具绑定到 Toolkit，实例失效时重新连接兼容副本。服务端注册由外部组件完成。
+- **Harness 集成示例** — 同一个 HarnessAgent 接入 MCP 发现、Skill 加载与 A2A 注册发现，见 [示例说明](agentscope-extensions-polaris-example/harness/README.md)。使用独立 `harness-example` profile。
 
 ## 模块
 
@@ -32,7 +33,7 @@ MCP 模块目前仅预留模块和依赖，尚未实现 MCP Server 注册、发�
 agentscope-extensions-polaris (root)
 ├── agentscope-extensions-polaris-bom                 # 版本管理 BOM
 ├── agentscope-extensions-polaris-core                # Polaris SDK 封装（polaris-all）
-├── agentscope-extensions-polaris-mcp                 # MCP 预留模块（尚未实现）
+├── agentscope-extensions-polaris-mcp                 # MCP 客户端发现与会话管理
 ├── agentscope-extensions-polaris-a2a                 # A2A 注册 / 发现
 ├── agentscope-extensions-polaris-skill               # Skill 只读仓库
 ├── agentscope-extensions-polaris-spring-boot-starter # Spring Boot 自动装配（Boot 3.2+）
@@ -203,6 +204,38 @@ AgentScope starter 里 `agentscope.agent` 生成的 `ReActAgent` 不带 `SkillBo
 - **独立端口**：普通 Polaris 服务发现使用 `8091`；Polaris SkillAPI 使用 `8094`。
 - **本地缓存**：下载的 Skill zip 由 polaris-java 缓存在 `./polaris/backup/skill`。
 - **共享连接**：`SkillAPI` 与 A2A 扩展共用同一 `SDKContext`。`PolarisSkillRepository.close()` 是空操作，不得销毁 `SkillAPI` / `SDKContext`。`PolarisContextManager.close()` / `SkillAPI.destroy()` **会**销毁共享的 `SDKContext`，其生命周期必须长于 Agent。上面示例中的 try-with-resources 适合短示例；生产环境中 Agent 存活期间必须一直持有该 context。
+
+## MCP 发现
+
+服务端由 Spring AI Polaris 或其他兼容组件注册；客户端读取实例 `host`、`port`、`protocol` 和 `metadata[mcp-endpoint-path]`，通过 MCP 获取工具目录。
+
+Spring Boot 应用引入 AgentScope 基础 Starter 与本项目 Polaris Starter，沿用已有模型配置：
+
+```yaml
+agentscope:
+  agent:
+    enabled: true
+  polaris:
+    enabled: ${POLARIS_ENABLED:true}
+    address: ${POLARIS_DISCOVERY_ADDRESS:${POLARIS_ADDRESS:127.0.0.1:8091}}
+    namespace: default
+    token: ${POLARIS_TOKEN:}
+    mcp:
+      discovery:
+        attach-to-toolkit: true
+        clients:
+          - service-name: business-mcp-server
+```
+
+默认 Agent 的 Toolkit 自动获得远程工具。自定义 Toolkit Bean 设置 `toolkit-bean-name`；多个 Toolkit 必须明确指定目标。每个 prototype Toolkit 使用独立 Wrapper，绑定完成后才构建 Agent。
+
+会话结束调用 `PolarisMcpClientFactory.release(agent.getToolkit())`，只移除该副本的工具，其他副本继续使用共享连接。原始 Toolkit 也保留使用权，单例 Toolkit 可以继续构建新 Agent；不再使用原始 Toolkit 时调用 `factory.release(originalToolkit)`。全部使用者释放或被垃圾回收后才关闭连接。AgentScope 构建 Agent 时复制 Toolkit，Spring 后处理器自动识别副本；代码中自行构建 Agent 时调用 `factory.retain(agent.getToolkit())`。默认 `idle-timeout: 10m` 回收闲置网络连接和发现订阅，下一次调用重新初始化，业务会话状态不保证保留。
+
+`name`、`async-client`、超时都是可选客户端策略；默认异步、请求超时 30s、初始化超时 10s。HTTPS 服务按需配置 `default-scheme: https`；鉴权使用消费方的 `headers` 或 Builder `headerProvider`。服务端 IP、传输和入口路径不在客户端重复配置。
+
+同一 Wrapper 的调用复用所选实例，实例失效后连接兼容副本；不同工具 Schema 或工具重名明确失败。已经发送的工具请求不自动重放。SDK 高级路由和逐次调用负载均衡不在首期。
+
+普通 Java、Spring Boot 客户端、Spring AI Polaris MCP Server 示例及真实北极星 E2E 入口见 [MCP 示例](agentscope-extensions-polaris-example/mcp/README.md)。
 
 ## 如何构建
 

@@ -1,0 +1,11 @@
+{
+  "branch": "codex/mcp-polaris-discovery",
+  "head": "81eebfecdd189759cd074cb5c3e188ce4a26cc5e",
+  "includes_uncommitted_changes": true,
+  "files": {
+    "agentscope-extensions-polaris-spring-boot-starter/src/main/java/com/tencent/ai/polaris/spring/boot/mcp/PolarisMcpClientFactory.java": "283dc5c1e9542d1d9de6857179bc511ab4d2d779bc859058608bed3b629b7d95",
+    "agentscope-extensions-polaris-spring-boot-starter/src/test/java/com/tencent/ai/polaris/spring/boot/mcp/PolarisMcpAutoConfigurationTest.java": "b115b2a60e7dd5b23f12180093b90adf8526e85fd55d46c59a56e33c58a47f4c",
+    "README.md": "cc6c7dca9944c7d61fda5f0ad2b916033d88bcb5a71cc6aea5dfc9a0d472d4db",
+    "README-zh.md": "678a0a62440f5b54c79cca234cb752fc31e82bc856557cf978624febcecefa87"
+  }
+}

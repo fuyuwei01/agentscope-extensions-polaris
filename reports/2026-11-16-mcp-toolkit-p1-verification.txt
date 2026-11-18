@@ -1,0 +1,31 @@
+Before fix
+[ERROR] Tests run: 14, Failures: 4, Errors: 0, Skipped: 0, Time elapsed: 1.102 s <<< FAILURE! -- in com.tencent.ai.polaris.spring.boot.mcp.PolarisMcpAutoConfigurationTest
+[ERROR]   PolarisMcpAutoConfigurationTest.rebindingReleasedOriginalDoesNotLetOldCopiesCloseItsNewClient:278->assertLookup:303
+[ERROR]   PolarisMcpAutoConfigurationTest.releaseAllowsTheOriginalToolkitToBeBoundAgain:221
+[ERROR]   PolarisMcpAutoConfigurationTest.releasingOneCopyPreservesOtherOwnersAndClosesAfterTheLastRelease:249->assertLookup:303
+[ERROR]   PolarisMcpAutoConfigurationTest.singletonToolkitCopiesRemainUsableWhenAnotherAgentIsReleased:318->lambda$singletonToolkitCopiesRemainUsableWhenAnotherAgentIsReleased$0:328->assertLookup:303
+[ERROR] Tests run: 14, Failures: 4, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+[INFO] Finished at: 2026-11-16T01:30:32+08:00
+
+After fix: affected reactor tests
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.585 s -- in com.tencent.ai.polaris.core.PolarisContextManagerTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in com.tencent.ai.polaris.core.PolarisServerPropertiesTest
+[INFO] Tests run: 18, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.097 s -- in com.tencent.ai.polaris.mcp.PolarisMcpHttpIntegrationTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.157 s -- in com.tencent.ai.polaris.mcp.PolarisMcpDiscoveryTest
+[INFO] Tests run: 21, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.739 s -- in com.tencent.ai.polaris.a2a.discovery.PolarisAgentCardResolverTest
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.055 s -- in com.tencent.ai.polaris.a2a.registry.PolarisAgentRegistryTest
+[INFO] Tests run: 24, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 31, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.483 s -- in com.tencent.ai.polaris.skill.PolarisMountedSkillRepositoryTest
+[INFO] Tests run: 43, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.059 s -- in com.tencent.ai.polaris.skill.PolarisSkillRepositoryTest
+[INFO] Tests run: 74, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.893 s -- in com.tencent.ai.polaris.spring.boot.skill.AgentscopePolarisSkillAutoConfigurationTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.186 s -- in com.tencent.ai.polaris.spring.boot.skill.AgentscopePolarisSkillAgentAutoConfigurationTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in com.tencent.ai.polaris.spring.boot.config.skill.AgentScopePolarisSkillPropertiesTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.318 s -- in com.tencent.ai.polaris.spring.boot.mcp.PolarisMcpAutoConfigurationTest
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.168 s -- in com.tencent.ai.polaris.spring.boot.AgentscopePolarisAutoConfigurationTest
+[INFO] Tests run: 47, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+[INFO] Finished at: 2026-11-16T01:33:59+08:00

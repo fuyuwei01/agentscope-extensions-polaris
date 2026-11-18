@@ -1,0 +1,136 @@
+{
+  "totals": {
+    "tests": 201,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "module": "agentscope-extensions-polaris-core",
+      "suite": "com.tencent.ai.polaris.core.PolarisContextManagerTest",
+      "type": "surefire-reports",
+      "tests": "11",
+      "seconds": "0.84"
+    },
+    {
+      "module": "agentscope-extensions-polaris-core",
+      "suite": "com.tencent.ai.polaris.core.PolarisServerPropertiesTest",
+      "type": "surefire-reports",
+      "tests": "7",
+      "seconds": "0.005"
+    },
+    {
+      "module": "agentscope-extensions-polaris-mcp",
+      "suite": "com.tencent.ai.polaris.mcp.PolarisMcpHttpIntegrationTest",
+      "type": "surefire-reports",
+      "tests": "6",
+      "seconds": "1.041"
+    },
+    {
+      "module": "agentscope-extensions-polaris-mcp",
+      "suite": "com.tencent.ai.polaris.mcp.PolarisMcpDiscoveryTest",
+      "type": "surefire-reports",
+      "tests": "15",
+      "seconds": "0.14"
+    },
+    {
+      "module": "agentscope-extensions-polaris-a2a",
+      "suite": "com.tencent.ai.polaris.a2a.registry.PolarisAgentRegistryTest",
+      "type": "surefire-reports",
+      "tests": "14",
+      "seconds": "0.049"
+    },
+    {
+      "module": "agentscope-extensions-polaris-a2a",
+      "suite": "com.tencent.ai.polaris.a2a.discovery.PolarisAgentCardResolverTest",
+      "type": "surefire-reports",
+      "tests": "10",
+      "seconds": "0.422"
+    },
+    {
+      "module": "agentscope-extensions-polaris-skill",
+      "suite": "com.tencent.ai.polaris.skill.PolarisSkillRepositoryTest",
+      "type": "surefire-reports",
+      "tests": "43",
+      "seconds": "0.046"
+    },
+    {
+      "module": "agentscope-extensions-polaris-skill",
+      "suite": "com.tencent.ai.polaris.skill.PolarisMountedSkillRepositoryTest",
+      "type": "surefire-reports",
+      "tests": "31",
+      "seconds": "0.369"
+    },
+    {
+      "module": "agentscope-extensions-polaris-spring-boot-starter",
+      "suite": "com.tencent.ai.polaris.spring.boot.skill.AgentscopePolarisSkillAgentAutoConfigurationTest",
+      "type": "surefire-reports",
+      "tests": "8",
+      "seconds": "0.172"
+    },
+    {
+      "module": "agentscope-extensions-polaris-spring-boot-starter",
+      "suite": "com.tencent.ai.polaris.spring.boot.AgentscopePolarisAutoConfigurationTest",
+      "type": "surefire-reports",
+      "tests": "14",
+      "seconds": "0.198"
+    },
+    {
+      "module": "agentscope-extensions-polaris-spring-boot-starter",
+      "suite": "com.tencent.ai.polaris.spring.boot.skill.AgentscopePolarisSkillAutoConfigurationTest",
+      "type": "surefire-reports",
+      "tests": "8",
+      "seconds": "0.619"
+    },
+    {
+      "module": "agentscope-extensions-polaris-spring-boot-starter",
+      "suite": "com.tencent.ai.polaris.spring.boot.config.skill.AgentScopePolarisSkillPropertiesTest",
+      "type": "surefire-reports",
+      "tests": "2",
+      "seconds": "0.003"
+    },
+    {
+      "module": "agentscope-extensions-polaris-spring-boot-starter",
+      "suite": "com.tencent.ai.polaris.spring.boot.mcp.PolarisMcpAutoConfigurationTest",
+      "type": "surefire-reports",
+      "tests": "11",
+      "seconds": "0.249"
+    },
+    {
+      "module": "agentscope-extensions-polaris-example/a2a/a2a-mock-model",
+      "suite": "com.tencent.ai.polaris.example.a2a.model.SkillCommandMockModelTest",
+      "type": "surefire-reports",
+      "tests": "10",
+      "seconds": "0.013"
+    },
+    {
+      "module": "agentscope-extensions-polaris-example/a2a/a2a-mock-model",
+      "suite": "com.tencent.ai.polaris.example.a2a.model.MockModelAutoConfigurationTest",
+      "type": "surefire-reports",
+      "tests": "2",
+      "seconds": "0.165"
+    },
+    {
+      "module": "agentscope-extensions-polaris-example/a2a/a2a-mock-model",
+      "suite": "com.tencent.ai.polaris.example.a2a.model.EchoLastUserInputModelTest",
+      "type": "surefire-reports",
+      "tests": "3",
+      "seconds": "0.297"
+    },
+    {
+      "module": "agentscope-extensions-polaris-example/mcp/mcp-client-spring-boot",
+      "suite": "com.tencent.ai.polaris.example.mcp.SpringAiMcpInteropTest",
+      "type": "surefire-reports",
+      "tests": "3",
+      "seconds": "1.92"
+    },
+    {
+      "module": "agentscope-extensions-polaris-example/mcp/mcp-server-spring-ai-polaris",
+      "suite": "com.tencent.ai.polaris.example.mcp.server.PolarisMcpE2EIT",
+      "type": "failsafe-reports",
+      "tests": "3",
+      "seconds": "25.531"
+    }
+  ]
+}

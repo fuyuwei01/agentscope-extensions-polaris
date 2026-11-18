@@ -1,0 +1,60 @@
+PR verification: Polaris MCP discovery and integrated Harness example
+Date/timezone: 2026-11-18 Asia/Shanghai
+Pre-commit HEAD: 80eeee2c5efed752ad74a095c1995222da4ff7dc (includes working-tree changes)
+Command: mvn -o -s <temporary-Maven-settings> -Pharness-example verify -DargLine=-javaagent:<mockito-core-5.23.0.jar>
+Environment: OpenJDK 25.0.2; Maven 3.9.9; Java 17 compilation target.
+Harness/core 1.1.0-SNAPSHOT dependencies were already installed locally.
+Harness is aggregated by agentscope-extensions-polaris-example/pom.xml under the harness-example profile.
+Result: 23 reactor modules; 21 test suites; 213 tests; 0 failures; 0 errors; 0 skipped.
+Mockito agent overrides JaCoCo argLine; no coverage result is claimed.
+This run uses local MCP/A2A servers and mocked Polaris APIs; remote Polaris E2E was not rerun.
+Historical remote E2E evidence is in 2026-11-15-mcp-polaris-e2e-self-test-report.md.
+
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.559 s -- in com.tencent.ai.polaris.core.PolarisContextManagerTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in com.tencent.ai.polaris.core.PolarisServerPropertiesTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.082 s -- in com.tencent.ai.polaris.mcp.PolarisMcpHttpIntegrationTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.135 s -- in com.tencent.ai.polaris.mcp.PolarisMcpDiscoveryTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.416 s -- in com.tencent.ai.polaris.a2a.discovery.PolarisAgentCardResolverTest
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.050 s -- in com.tencent.ai.polaris.a2a.registry.PolarisAgentRegistryTest
+[INFO] Tests run: 31, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.391 s -- in com.tencent.ai.polaris.skill.PolarisMountedSkillRepositoryTest
+[INFO] Tests run: 43, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.045 s -- in com.tencent.ai.polaris.skill.PolarisSkillRepositoryTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.592 s -- in com.tencent.ai.polaris.spring.boot.skill.AgentscopePolarisSkillAutoConfigurationTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.168 s -- in com.tencent.ai.polaris.spring.boot.skill.AgentscopePolarisSkillAgentAutoConfigurationTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.tencent.ai.polaris.spring.boot.config.skill.AgentScopePolarisSkillPropertiesTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.293 s -- in com.tencent.ai.polaris.spring.boot.mcp.PolarisMcpAutoConfigurationTest
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.155 s -- in com.tencent.ai.polaris.spring.boot.AgentscopePolarisAutoConfigurationTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.281 s -- in com.tencent.ai.polaris.example.a2a.model.EchoLastUserInputModelTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.159 s -- in com.tencent.ai.polaris.example.a2a.model.MockModelAutoConfigurationTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in com.tencent.ai.polaris.example.a2a.model.SkillCommandMockModelTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.919 s -- in com.tencent.ai.polaris.example.mcp.SpringAiMcpInteropTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.657 s -- in com.tencent.ai.polaris.example.a2a.server.springboot.StarterRegistrationTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.789 s -- in com.tencent.ai.polaris.example.a2a.server.interfaces.MultiTransportIntegrationTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.833 s -- in com.tencent.ai.polaris.example.a2a.server.interfaces.TransportRegistrationTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.556 s -- in com.tencent.ai.polaris.example.harness.HarnessIntegrationTest
+[INFO] Reactor Summary for AgentScope Extensions Polaris 0.1.0-RC1:
+[INFO] AgentScope Extensions Polaris BOM .................. SUCCESS [  0.001 s]
+[INFO] AgentScope Extensions Polaris ...................... SUCCESS [  0.588 s]
+[INFO] AgentScope Extensions Polaris Core ................. SUCCESS [  2.310 s]
+[INFO] AgentScope Extensions Polaris MCP .................. SUCCESS [  2.698 s]
+[INFO] AgentScope Extensions Polaris A2A .................. SUCCESS [  2.078 s]
+[INFO] AgentScope Extensions Polaris Skill ................ SUCCESS [  1.429 s]
+[INFO] AgentScope Java Polaris - Spring Boot Starter ...... SUCCESS [  3.289 s]
+[INFO] AgentScope Extensions Polaris Example .............. SUCCESS [  0.006 s]
+[INFO] agentscope-extensions-polaris-example-mcp .......... SUCCESS [  0.004 s]
+[INFO] agentscope-extensions-polaris-example-mcp-client ... SUCCESS [  6.664 s]
+[INFO] AgentScope Extensions Polaris Example A2A .......... SUCCESS [  0.013 s]
+[INFO] AgentScope Extensions Polaris Example A2A Mock Model SUCCESS [  1.425 s]
+[INFO] agentscope-extensions-polaris-example-mcp-client-spring-boot SUCCESS [  3.843 s]
+[INFO] agentscope-extensions-polaris-example-mcp-server-spring-ai-polaris SUCCESS [  0.773 s]
+[INFO] AgentScope Extensions Polaris Example A2A Server ... SUCCESS [  6.266 s]
+[INFO] AgentScope Extensions Polaris Example A2A Client ... SUCCESS [  6.024 s]
+[INFO] AgentScope Extensions Polaris Example A2A Server (Spring Boot) SUCCESS [  3.809 s]
+[INFO] AgentScope Extensions Polaris Example A2A Server Additional Interfaces (Spring Boot) SUCCESS [  5.083 s]
+[INFO] AgentScope Extensions Polaris Example A2A Client (Spring Boot) SUCCESS [  1.566 s]
+[INFO] AgentScope Extensions Polaris Example Skill ........ SUCCESS [  0.012 s]
+[INFO] AgentScope Extensions Polaris Example Skill Client . SUCCESS [  6.525 s]
+[INFO] AgentScope Extensions Polaris Example Mounted Skill Client SUCCESS [  5.835 s]
+[INFO] AgentScope Extensions Polaris Harness Example ...... SUCCESS [  4.994 s]
+[INFO] BUILD SUCCESS
+[INFO] Total time:  01:05 min
+[INFO] Finished at: 2026-11-18T15:37:17+08:00

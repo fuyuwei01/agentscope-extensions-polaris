@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Tencent is pleased to support the open source community by making agentscope-extensions-polaris available.
+  ~
+  ~ Copyright (C) 2026 Tencent. All rights reserved.
+  ~
+  ~ Licensed under the BSD 3-Clause License (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~ https://opensource.org/licenses/BSD-3-Clause
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+  ~ on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+  ~ specific language governing permissions and limitations under the License.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.tencent.ai.polaris</groupId>
+        <artifactId>agentscope-extensions-polaris-example</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>agentscope-extensions-polaris-example-harness</artifactId>
+    <name>AgentScope Extensions Polaris Harness Example</name>
+    <description>Harness Agent with Polaris MCP discovery, skills and A2A registration/discovery</description>
+
+    <properties>
+        <spring.boot.version>3.5.13</spring.boot.version>
+        <harness.version>1.1.0-SNAPSHOT</harness.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${junit-jupiter.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Harness requires the matching core; other modules keep the root 1.0.12 default. -->
+            <dependency>
+                <groupId>io.agentscope</groupId>
+                <artifactId>agentscope-core</artifactId>
+                <version>${harness.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-test</artifactId>
+                <version>${spring.boot.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-harness</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-core</artifactId>
+        </dependency>
+        <!-- Offline model providers selectable through agentscope.model.provider -->
+        <dependency>
+            <groupId>com.tencent.ai.polaris</groupId>
+            <artifactId>agentscope-extensions-polaris-example-a2a-mock-model</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+        <!-- Polaris Spring Boot starter: provides PolarisAgentRegistry bean + PolarisContextManager -->
+        <dependency>
+            <groupId>com.tencent.ai.polaris</groupId>
+            <artifactId>agentscope-extensions-polaris-spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- AgentScope A2A server starter: auto-assembles AgentScopeA2aServer + JSON-RPC controller,
+             collects List<AgentRegistry> (picks up the PolarisAgentRegistry above) -->
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-a2a-spring-boot-starter</artifactId>
+            <exclusions>
+                <!-- The A2A SDK bundles jboss-logmanager as a competing SLF4J provider;
+                     Spring Boot requires logback and fails to start when both are present. -->
+                <exclusion>
+                    <groupId>org.jboss.slf4j</groupId>
+                    <artifactId>slf4j-jboss-logmanager</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.jboss.logmanager</groupId>
+                    <artifactId>jboss-logmanager</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.jboss.logging</groupId>
+                    <artifactId>jboss-logging</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.jboss.threads</groupId>
+                    <artifactId>jboss-threads</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- AgentScope starter types are used by the Polaris Toolkit post-processor; the demo owns its agent. -->
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Web: serves the A2A JSON-RPC endpoint via the starter's controller -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring.boot.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

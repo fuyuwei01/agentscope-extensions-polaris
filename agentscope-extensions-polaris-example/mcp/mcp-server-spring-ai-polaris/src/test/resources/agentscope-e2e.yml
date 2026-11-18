@@ -1,0 +1,11 @@
+agentscope:
+  agent:
+    enabled: true
+  polaris:
+    address: ${e2e.polaris.address}
+    namespace: ${e2e.polaris.namespace}
+    mcp:
+      discovery:
+        attach-to-toolkit: true
+        clients:
+          - service-name: ${e2e.mcp.service}

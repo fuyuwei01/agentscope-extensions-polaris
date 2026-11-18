@@ -1,0 +1,28 @@
+{
+  "branch": "codex/mcp-polaris-discovery",
+  "head": "81eebfecdd189759cd074cb5c3e188ce4a26cc5e",
+  "includes_uncommitted_changes": true,
+  "files": {
+    "agentscope-extensions-polaris-example/harness/README.md": "86b0dfc703028cf41e6931016c15487e0095280c8ef945be95ac214666f9b21d",
+    "agentscope-extensions-polaris-example/harness/ask.sh": "9c1711ef7c8eea3386d436676d0d30234f2ec0893bb169c87f676737c62fd4c6",
+    "agentscope-extensions-polaris-example/harness/polaris/logs/audit/polaris-audit.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agentscope-extensions-polaris-example/harness/polaris/logs/polaris-circuitbreaker.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agentscope-extensions-polaris-example/harness/polaris/logs/polaris-event.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agentscope-extensions-polaris-example/harness/polaris/logs/polaris-healthcheck-event.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agentscope-extensions-polaris-example/harness/polaris/logs/polaris-instance-heartbeat.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agentscope-extensions-polaris-example/harness/polaris/logs/polaris-lossless-event.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agentscope-extensions-polaris-example/harness/polaris/logs/polaris-update-event.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agentscope-extensions-polaris-example/harness/polaris/logs/polaris.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agentscope-extensions-polaris-example/harness/pom.xml": "f03b09f871a1ef5ee35a2b1a46a9fb3c3e8d6b621def09ddca0d501343a2abbd",
+    "agentscope-extensions-polaris-example/harness/sample-skill/SKILL.md": "86ecc1afa7f44d38bf2fb79b66d09c7137c20d78f6ec9dc63236ba73bc91b364",
+    "agentscope-extensions-polaris-example/harness/src/main/java/com/tencent/ai/polaris/example/harness/IntegrationMockModel.java": "4b1db5660979bd66570a1b43a55eccd1b163e2db517fdebbd01a51885b92792f",
+    "agentscope-extensions-polaris-example/harness/src/main/java/com/tencent/ai/polaris/example/harness/PolarisHarnessAgentRunner.java": "8ae9656e2ade096b65e401b914836cb0af588d5f8e98981b134b92102aa15290",
+    "agentscope-extensions-polaris-example/harness/src/main/java/com/tencent/ai/polaris/example/harness/PolarisHarnessApplication.java": "a51d68bfe2eea008c8db33a27a7d416d613c80861b52f4d6ff5100e8836ad9ee",
+    "agentscope-extensions-polaris-example/harness/src/main/java/com/tencent/ai/polaris/example/harness/RemoteAgentTools.java": "59179c1df7e48986849911ba354b6c9c6ac67bfa95f0e774d6a0324d7b4e4535",
+    "agentscope-extensions-polaris-example/harness/src/main/resources/application.yml": "8e47c382c9c28124d5c4256c842454ae2b91ce855be9848d235c57ebeef454ea",
+    "agentscope-extensions-polaris-example/harness/src/test/java/com/tencent/ai/polaris/example/harness/HarnessIntegrationTest.java": "eae7bf6ae1c182471565605ef43a5037eca739a6a31f4cdffaa230a48e7b9330",
+    "pom.xml": "50f29b93dcbf38b7f62a2c0531a39546e9de55034541f3261a3017c494a9107e",
+    "README.md": "1f214aded3e5466e18ba6ccc529f94774c6aab4375dac9079bb02686ea38c3c0",
+    "README-zh.md": "2fc778cb773ff97c720279bb364f7d54fee8af4b6ed970ffcf54364fa3000ca2"
+  }
+}

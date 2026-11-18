@@ -10,11 +10,12 @@ README:
 - [Modules](#modules)
 - [A2A Registration](#a2a-registration)
 - [Skill Usage](#skill-usage)
+- [MCP Discovery](#mcp-discovery)
 - [How to Build](#how-to-build)
 
 ## Introduction
 
-AgentScope Extensions Polaris is an extension for [AgentScope Java](https://github.com/agentscope-ai/agentscope-java) that integrates with [Polaris](https://polarismesh.cn/) (PolarisMesh) for A2A registration and discovery, and read-only loading of published and service-mounted Skills.
+AgentScope Extensions Polaris is an extension for [AgentScope Java](https://github.com/agentscope-ai/agentscope-java) that integrates with [Polaris](https://polarismesh.cn/) (PolarisMesh) for A2A registration and discovery, read-only loading of published and service-mounted Skills, and MCP discovery and remote tool binding.
 
 - [Polaris Github](https://github.com/polarismesh/polaris)
 - [AgentScope Java Github](https://github.com/agentscope-ai/agentscope-java)
@@ -23,8 +24,8 @@ Currently supported capabilities:
 
 - **A2A Management** — Register Agent-to-Agent (A2A) endpoints to Polaris and discover peer agents dynamically
 - **Skill Loading** — Load published Skills from Polaris, including the versions mounted on a service, and attach them to AgentScope agents
-
-The MCP module is currently a placeholder with dependencies only. MCP Server registration, discovery, and client-side load balancing are not implemented.
+- **MCP Discovery** — Discover registered MCP Servers, bind remote tools to Toolkit, and reconnect to compatible replicas when an instance becomes unavailable. MCP Server registration remains external.
+- **Harness example** — One HarnessAgent uses MCP discovery, Polaris skills and A2A registration/discovery. See the [example guide](agentscope-extensions-polaris-example/harness/README.md); enable the separate `harness-example` profile.
 
 ## Modules
 
@@ -32,7 +33,7 @@ The MCP module is currently a placeholder with dependencies only. MCP Server reg
 agentscope-extensions-polaris (root)
 ├── agentscope-extensions-polaris-bom                 # Bill of Materials
 ├── agentscope-extensions-polaris-core                # Polaris SDK wrapper (polaris-all)
-├── agentscope-extensions-polaris-mcp                 # MCP placeholder (not implemented)
+├── agentscope-extensions-polaris-mcp                 # MCP client discovery and session management
 ├── agentscope-extensions-polaris-a2a                 # A2A registry / discovery
 ├── agentscope-extensions-polaris-skill               # Read-only Skill repositories
 ├── agentscope-extensions-polaris-spring-boot-starter # Spring Boot auto-config (Boot 3.2+)
@@ -214,6 +215,36 @@ keep the AgentScope agent. Applications that build their own agent can keep inje
 - **Separate endpoint**: regular Polaris discovery uses port `8091`; Polaris SkillAPI uses port `8094`.
 - **Local cache**: Downloaded Skill zip files are cached by polaris-java under `./polaris/backup/skill`.
 - **Shared connection**: `SkillAPI` shares the same `SDKContext` as the A2A extension. `PolarisSkillRepository.close()` is a no-op and must **not** destroy `SkillAPI` or the `SDKContext`. `PolarisContextManager.close()` / `SkillAPI.destroy()` **do** destroy the shared `SDKContext` and must outlive the Agent. The try-with-resources snippet above is fine for a short example; production Agents must keep the context for the Agent lifetime.
+
+## MCP Discovery
+
+Run and register the MCP Server with Spring AI Polaris or another compatible provider. The client reads instance `host`, `port`, `protocol` and `metadata[mcp-endpoint-path]`, then obtains tools through MCP.
+
+Add the AgentScope base starter and this project's Polaris starter, keeping the host application's model configuration:
+
+```yaml
+agentscope:
+  agent:
+    enabled: true
+  polaris:
+    enabled: ${POLARIS_ENABLED:true}
+    address: ${POLARIS_DISCOVERY_ADDRESS:${POLARIS_ADDRESS:127.0.0.1:8091}}
+    namespace: default
+    token: ${POLARIS_TOKEN:}
+    mcp:
+      discovery:
+        attach-to-toolkit: true
+        clients:
+          - service-name: business-mcp-server
+```
+
+The default Agent receives the populated Toolkit. Set `toolkit-bean-name` for a custom Toolkit Bean; multiple Toolkits require an explicit target. Each prototype Toolkit owns separate wrappers. Spring tracks the Toolkit copy created by AgentScope; for manually built agents, call `factory.retain(agent.getToolkit())` after construction.
+
+Release sessions with `PolarisMcpClientFactory.release(agent.getToolkit())`. Releasing one copy removes only its tools; other copies keep their shared connection. The original Toolkit also remains an owner, allowing a singleton Toolkit to create more Agents. When it is no longer needed, call `factory.release(originalToolkit)`; connections close after all owners are released or garbage collected. The default `idle-timeout: 10m` recycles unused connections and discovery leases; the next call initializes again, without guaranteeing preservation of server-side state. Optional client policies default to asynchronous clients, a 30s request timeout and a 10s initialization timeout. Configure `default-scheme: https` for HTTPS and caller-owned `headers` or a Java `headerProvider` for authentication.
+
+Calls reuse the selected instance. An unavailable instance triggers a new connection to a replica with compatible tool definitions. Conflicting tool names fail binding. Sent tool calls are never replayed automatically. Advanced Polaris routing and per-call balancing are outside this initial implementation.
+
+See the [MCP examples](agentscope-extensions-polaris-example/mcp/README.md) for Java and Spring Boot clients, a Spring AI Polaris MCP Server, and an opt-in E2E test against a real Polaris registry.
 
 ## How to Build
 

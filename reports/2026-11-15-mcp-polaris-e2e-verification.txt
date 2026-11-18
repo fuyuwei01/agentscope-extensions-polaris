@@ -1,0 +1,62 @@
+MCP end-to-end verification performed against the user-provided Polaris instance.
+Date/timezone: 2026-11-15 Asia/Shanghai
+Polaris SDK address: 43.144.18.55:8091
+Polaris HTTP address: 43.144.18.55:8090
+Namespace: default
+Total tests: 201; ordinary: 198; remote E2E: 3; failures/errors/skipped: 0
+E2E suite time: 25.531 seconds
+
+[INFO] Reactor Summary for AgentScope Extensions Polaris 0.1.0-RC1:
+[INFO] AgentScope Extensions Polaris ...................... SUCCESS [  0.525 s]
+[INFO] AgentScope Extensions Polaris Core ................. SUCCESS [  3.276 s]
+[INFO] AgentScope Extensions Polaris MCP .................. SUCCESS [  5.013 s]
+[INFO] AgentScope Extensions Polaris A2A .................. SUCCESS [  1.725 s]
+[INFO] AgentScope Extensions Polaris Skill ................ SUCCESS [  1.692 s]
+[INFO] AgentScope Java Polaris - Spring Boot Starter ...... SUCCESS [  3.284 s]
+[INFO] AgentScope Extensions Polaris Example .............. SUCCESS [  0.006 s]
+[INFO] agentscope-extensions-polaris-example-mcp .......... SUCCESS [  0.007 s]
+[INFO] agentscope-extensions-polaris-example-mcp-client ... SUCCESS [  7.388 s]
+[INFO] AgentScope Extensions Polaris Example A2A .......... SUCCESS [  0.011 s]
+[INFO] AgentScope Extensions Polaris Example A2A Mock Model SUCCESS [  1.537 s]
+[INFO] agentscope-extensions-polaris-example-mcp-client-spring-boot SUCCESS [  3.713 s]
+[INFO] agentscope-extensions-polaris-example-mcp-server-spring-ai-polaris SUCCESS [ 27.467 s]
+[INFO] BUILD SUCCESS
+[INFO] Total time:  55.900 s
+[INFO] Finished at: 2026-11-15T01:09:10+08:00
+
+agentscope-mcp-e2e-sse-6985f5e6-f20 SSE registration metadata verified; replicas=1
+agentscope-mcp-e2e-sse-6985f5e6-f20 advertise host auto-detected: local non-loopback address verified
+agentscope-mcp-e2e-sse-6985f5e6-f20 native Toolkit: echo/add/session affinity verified; selected=replica-a
+agentscope-mcp-e2e-sse-6985f5e6-f20 Spring Agent YAML auto-binding, real tool call, release verified
+agentscope-mcp-e2e-sse-6985f5e6-f20 cleanup verified: instances=0; test service removed
+agentscope-mcp-e2e-streamable-daf2b8e1-34f STREAMABLE registration metadata verified; replicas=2
+agentscope-mcp-e2e-streamable-daf2b8e1-34f explicit advertise host override verified
+agentscope-mcp-e2e-streamable-daf2b8e1-34f native Toolkit: echo/add/session affinity verified; selected=replica-b
+agentscope-mcp-e2e-streamable-daf2b8e1-34f Spring Agent YAML auto-binding, real tool call, release verified
+agentscope-mcp-e2e-streamable-daf2b8e1-34f Spring Agent YAML auto-binding, real tool call, release verified
+agentscope-mcp-e2e-streamable-daf2b8e1-34f selected replica stopped; switched to replica-a; existing Toolkit and new Agent call succeeded
+agentscope-mcp-e2e-streamable-daf2b8e1-34f cleanup verified: instances=0; test service removed
+agentscope-mcp-e2e-stateless-c7155e3d-a96 STATELESS registration metadata verified; replicas=1
+agentscope-mcp-e2e-stateless-c7155e3d-a96 explicit advertise host override verified
+agentscope-mcp-e2e-stateless-c7155e3d-a96 native Toolkit: echo/add/session affinity verified; selected=replica-a
+agentscope-mcp-e2e-stateless-c7155e3d-a96 Spring Agent YAML auto-binding, real tool call, release verified
+agentscope-mcp-e2e-stateless-c7155e3d-a96 cleanup verified: instances=0; test service removed
+
+agentscope-mcp-e2e-sse-6985f5e6-f20 independent cleanup verified: instances=0; services=0
+agentscope-mcp-e2e-stateless-c7155e3d-a96 independent cleanup verified: instances=0; services=0
+agentscope-mcp-e2e-streamable-daf2b8e1-34f independent cleanup verified: instances=0; services=0
+Independent process check: no Java server process associated with this run remains.
+Checked at: 2026-11-15T01:10:10+08:00
+
+Archive check: server jar contains Spring AI Polaris 0.1.0, Spring AI 1.1.4, Spring Boot 3.5.13, MCP SDK 0.17.0, Polaris Java SDK 2.2.0.0-RC1; no AgentScope client artifact.
+Source snapshot check: all 137 captured files unchanged throughout verification.
+
+Per-module suite counts:
+agentscope-extensions-polaris-a2a: 24 tests
+agentscope-extensions-polaris-core: 18 tests
+agentscope-extensions-polaris-example/a2a/a2a-mock-model: 15 tests
+agentscope-extensions-polaris-example/mcp/mcp-client-spring-boot: 3 tests
+agentscope-extensions-polaris-example/mcp/mcp-server-spring-ai-polaris: 3 tests
+agentscope-extensions-polaris-mcp: 21 tests
+agentscope-extensions-polaris-skill: 74 tests
+agentscope-extensions-polaris-spring-boot-starter: 43 tests
